@@ -10,15 +10,25 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as HrRouteImport } from './routes/hr'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CoursesRouteImport } from './routes/courses'
 import { Route as CertificatesRouteImport } from './routes/certificates'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as HrReportsRouteImport } from './routes/hr.reports'
+import { Route as HrDashboardRouteImport } from './routes/hr.dashboard'
+import { Route as HrCoursesRouteImport } from './routes/hr.courses'
+import { Route as HrAssignRouteImport } from './routes/hr.assign'
 import { Route as CoursesCourseIdRouteImport } from './routes/courses.$courseId'
 
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HrRoute = HrRouteImport.update({
+  id: '/hr',
+  path: '/hr',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -41,6 +51,26 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HrReportsRoute = HrReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => HrRoute,
+} as any)
+const HrDashboardRoute = HrDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => HrRoute,
+} as any)
+const HrCoursesRoute = HrCoursesRouteImport.update({
+  id: '/courses',
+  path: '/courses',
+  getParentRoute: () => HrRoute,
+} as any)
+const HrAssignRoute = HrAssignRouteImport.update({
+  id: '/assign',
+  path: '/assign',
+  getParentRoute: () => HrRoute,
+} as any)
 const CoursesCourseIdRoute = CoursesCourseIdRouteImport.update({
   id: '/$courseId',
   path: '/$courseId',
@@ -52,16 +82,26 @@ export interface FileRoutesByFullPath {
   '/certificates': typeof CertificatesRoute
   '/courses': typeof CoursesRouteWithChildren
   '/dashboard': typeof DashboardRoute
+  '/hr': typeof HrRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/courses/$courseId': typeof CoursesCourseIdRoute
+  '/hr/assign': typeof HrAssignRoute
+  '/hr/courses': typeof HrCoursesRoute
+  '/hr/dashboard': typeof HrDashboardRoute
+  '/hr/reports': typeof HrReportsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/certificates': typeof CertificatesRoute
   '/courses': typeof CoursesRouteWithChildren
   '/dashboard': typeof DashboardRoute
+  '/hr': typeof HrRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/courses/$courseId': typeof CoursesCourseIdRoute
+  '/hr/assign': typeof HrAssignRoute
+  '/hr/courses': typeof HrCoursesRoute
+  '/hr/dashboard': typeof HrDashboardRoute
+  '/hr/reports': typeof HrReportsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -69,8 +109,13 @@ export interface FileRoutesById {
   '/certificates': typeof CertificatesRoute
   '/courses': typeof CoursesRouteWithChildren
   '/dashboard': typeof DashboardRoute
+  '/hr': typeof HrRouteWithChildren
   '/notifications': typeof NotificationsRoute
   '/courses/$courseId': typeof CoursesCourseIdRoute
+  '/hr/assign': typeof HrAssignRoute
+  '/hr/courses': typeof HrCoursesRoute
+  '/hr/dashboard': typeof HrDashboardRoute
+  '/hr/reports': typeof HrReportsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -79,24 +124,39 @@ export interface FileRouteTypes {
     | '/certificates'
     | '/courses'
     | '/dashboard'
+    | '/hr'
     | '/notifications'
     | '/courses/$courseId'
+    | '/hr/assign'
+    | '/hr/courses'
+    | '/hr/dashboard'
+    | '/hr/reports'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/certificates'
     | '/courses'
     | '/dashboard'
+    | '/hr'
     | '/notifications'
     | '/courses/$courseId'
+    | '/hr/assign'
+    | '/hr/courses'
+    | '/hr/dashboard'
+    | '/hr/reports'
   id:
     | '__root__'
     | '/'
     | '/certificates'
     | '/courses'
     | '/dashboard'
+    | '/hr'
     | '/notifications'
     | '/courses/$courseId'
+    | '/hr/assign'
+    | '/hr/courses'
+    | '/hr/dashboard'
+    | '/hr/reports'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -104,6 +164,7 @@ export interface RootRouteChildren {
   CertificatesRoute: typeof CertificatesRoute
   CoursesRoute: typeof CoursesRouteWithChildren
   DashboardRoute: typeof DashboardRoute
+  HrRoute: typeof HrRouteWithChildren
   NotificationsRoute: typeof NotificationsRoute
 }
 
@@ -114,6 +175,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hr': {
+      id: '/hr'
+      path: '/hr'
+      fullPath: '/hr'
+      preLoaderRoute: typeof HrRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -144,6 +212,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/hr/reports': {
+      id: '/hr/reports'
+      path: '/reports'
+      fullPath: '/hr/reports'
+      preLoaderRoute: typeof HrReportsRouteImport
+      parentRoute: typeof HrRoute
+    }
+    '/hr/dashboard': {
+      id: '/hr/dashboard'
+      path: '/dashboard'
+      fullPath: '/hr/dashboard'
+      preLoaderRoute: typeof HrDashboardRouteImport
+      parentRoute: typeof HrRoute
+    }
+    '/hr/courses': {
+      id: '/hr/courses'
+      path: '/courses'
+      fullPath: '/hr/courses'
+      preLoaderRoute: typeof HrCoursesRouteImport
+      parentRoute: typeof HrRoute
+    }
+    '/hr/assign': {
+      id: '/hr/assign'
+      path: '/assign'
+      fullPath: '/hr/assign'
+      preLoaderRoute: typeof HrAssignRouteImport
+      parentRoute: typeof HrRoute
+    }
     '/courses/$courseId': {
       id: '/courses/$courseId'
       path: '/$courseId'
@@ -165,11 +261,28 @@ const CoursesRouteChildren: CoursesRouteChildren = {
 const CoursesRouteWithChildren =
   CoursesRoute._addFileChildren(CoursesRouteChildren)
 
+interface HrRouteChildren {
+  HrAssignRoute: typeof HrAssignRoute
+  HrCoursesRoute: typeof HrCoursesRoute
+  HrDashboardRoute: typeof HrDashboardRoute
+  HrReportsRoute: typeof HrReportsRoute
+}
+
+const HrRouteChildren: HrRouteChildren = {
+  HrAssignRoute: HrAssignRoute,
+  HrCoursesRoute: HrCoursesRoute,
+  HrDashboardRoute: HrDashboardRoute,
+  HrReportsRoute: HrReportsRoute,
+}
+
+const HrRouteWithChildren = HrRoute._addFileChildren(HrRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CertificatesRoute: CertificatesRoute,
   CoursesRoute: CoursesRouteWithChildren,
   DashboardRoute: DashboardRoute,
+  HrRoute: HrRouteWithChildren,
   NotificationsRoute: NotificationsRoute,
 }
 export const routeTree = rootRouteImport
