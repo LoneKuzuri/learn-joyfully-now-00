@@ -1,9 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { departments, overdueLearners, recentAssignments } from "@/lib/lms-data";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useAuthGuard } from "@/hooks/use-auth-guard";
+import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Users, CheckCircle2, AlertTriangle, ClipboardList } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Users, CheckCircle2, AlertTriangle, ClipboardList, ArrowRight, Sparkles, BookOpen, BarChart3, UserPlus } from "lucide-react";
 
 export const Route = createFileRoute("/hr/dashboard")({
   head: () => ({
@@ -16,121 +17,87 @@ export const Route = createFileRoute("/hr/dashboard")({
 });
 
 function HRDashboardPage() {
-  const totalLearners = departments.reduce((s, d) => s + d.learners, 0);
-  const avgCompletion = Math.round(departments.reduce((s, d) => s + d.completion, 0) / departments.length);
-  const totalOverdue = departments.reduce((s, d) => s + d.overdue, 0);
-  const maxLearners = Math.max(...departments.map((d) => d.learners));
+  const { user, ready, allowed } = useAuthGuard("hr");
+  const { firstTime } = useAuth();
+  if (!ready || !allowed || !user) return <Skeleton />;
 
   const kpis = [
-    { label: "Active learners", value: totalLearners, icon: Users, tone: "info" as const },
-    { label: "Completion rate", value: `${avgCompletion}%`, icon: CheckCircle2, tone: "success" as const },
-    { label: "Overdue", value: totalOverdue, icon: AlertTriangle, tone: "warning" as const },
-    { label: "Mandatory active", value: "8 courses", icon: ClipboardList, tone: "info" as const },
+    { label: "Active learners", value: 0, icon: Users, tone: "info" as const },
+    { label: "Completion rate", value: "—", icon: CheckCircle2, tone: "success" as const },
+    { label: "Overdue", value: 0, icon: AlertTriangle, tone: "warning" as const },
+    { label: "Active assignments", value: 0, icon: ClipboardList, tone: "info" as const },
   ];
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">HR Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Organization-wide training health</p>
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">HR Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Welcome {user.name.split(" ")[0]} — let's set up training for your organization.</p>
+        </div>
+        {firstTime && <Badge className="shrink-0 gap-1"><Sparkles className="h-3 w-3" /> First login</Badge>}
       </div>
 
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         {kpis.map((k) => (
           <Card key={k.label}>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="text-sm text-muted-foreground">{k.label}</div>
-                  <div className="text-3xl font-semibold mt-1">{k.value}</div>
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-xs sm:text-sm text-muted-foreground truncate">{k.label}</div>
+                  <div className="text-2xl sm:text-3xl font-semibold mt-1">{k.value}</div>
                 </div>
-                <div className={`p-2 rounded-lg bg-${k.tone}/15`}><k.icon className={`h-5 w-5 text-${k.tone}`} /></div>
+                <div className={`p-2 rounded-lg shrink-0 bg-${k.tone}/15`}><k.icon className={`h-5 w-5 text-${k.tone}`} /></div>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
+      {/* Setup checklist */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Department analytics</CardTitle>
+          <CardTitle className="text-base">Set up your training program</CardTitle>
         </CardHeader>
-        <CardContent>
-          {/* Simple bar chart */}
-          <div className="space-y-4">
-            {departments.map((d) => (
-              <div key={d.id}>
-                <div className="flex justify-between text-sm mb-1">
-                  <span className="font-medium">{d.name}</span>
-                  <span className="text-muted-foreground">
-                    {d.learners} learners · <span className="text-foreground font-medium">{d.completion}%</span> completion
-                    {d.overdue > 0 && <span className="text-warning ml-2">· {d.overdue} overdue</span>}
-                  </span>
+        <CardContent className="grid gap-4 md:grid-cols-3">
+          {setup.map((s, i) => (
+            <Link key={s.title} to={s.to} className="rounded-xl border p-4 hover:border-primary hover:shadow-sm transition flex flex-col">
+              <div className="flex items-center justify-between">
+                <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary grid place-items-center">
+                  <s.icon className="h-5 w-5" />
                 </div>
-                <div className="grid grid-cols-12 gap-2 items-center">
-                  <div className="col-span-8 h-6 rounded-md bg-muted overflow-hidden flex">
-                    <div className="h-full bg-primary" style={{ width: `${d.completion}%` }} />
-                    <div className="h-full bg-warning/60" style={{ width: `${(d.overdue / d.learners) * 100}%` }} />
-                  </div>
-                  <div className="col-span-4 h-6 rounded-md bg-info/10 overflow-hidden">
-                    <div className="h-full bg-info" style={{ width: `${(d.learners / maxLearners) * 100}%` }} />
-                  </div>
-                </div>
+                <Badge variant="outline" className="text-[10px]">Step {i + 1}</Badge>
               </div>
-            ))}
-            <div className="flex gap-4 pt-2 text-xs text-muted-foreground">
-              <Legend color="bg-primary" label="Completed" />
-              <Legend color="bg-warning/60" label="Overdue" />
-              <Legend color="bg-info" label="Headcount" />
-            </div>
-          </div>
+              <div className="mt-3 font-medium">{s.title}</div>
+              <p className="text-xs text-muted-foreground mt-1 flex-1">{s.desc}</p>
+              <div className="mt-3 text-xs text-primary inline-flex items-center">{s.cta} <ArrowRight className="h-3 w-3 ml-1" /></div>
+            </Link>
+          ))}
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 lg:gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle className="text-base">Recent assignments</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Department analytics</CardTitle></CardHeader>
           <CardContent>
-            <ul className="divide-y">
-              {recentAssignments.map((a, i) => (
-                <li key={i} className="flex items-center justify-between py-3">
-                  <div>
-                    <div className="text-sm font-medium">{a.course}</div>
-                    <div className="text-xs text-muted-foreground">{a.assignedTo}</div>
-                  </div>
-                  <Badge variant="secondary">{a.date}</Badge>
-                </li>
-              ))}
-            </ul>
+            <EmptyState
+              icon={BarChart3}
+              title="No data yet"
+              description="Once you've assigned courses and learners begin training, completion analytics will appear here by department."
+              primary={{ to: "/hr/assign", label: "Assign first course", icon: ClipboardList }}
+            />
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="text-base">Overdue learners</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">Recent activity</CardTitle></CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Learner</TableHead>
-                  <TableHead>Course</TableHead>
-                  <TableHead className="text-right">Days</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {overdueLearners.map((l) => (
-                  <TableRow key={l.name}>
-                    <TableCell>
-                      <div className="font-medium text-sm">{l.name}</div>
-                      <div className="text-xs text-muted-foreground">{l.department}</div>
-                    </TableCell>
-                    <TableCell className="text-sm">{l.course}</TableCell>
-                    <TableCell className="text-right">
-                      <Badge variant="outline" className="text-warning border-warning/40">{l.daysOverdue}d</Badge>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <EmptyState
+              icon={Users}
+              title="Nothing to report yet"
+              description="Assignment events, completions and overdue alerts will show up here in real time."
+              primary={{ to: "/hr/reports", label: "Open reports", icon: Users }}
+            />
           </CardContent>
         </Card>
       </div>
@@ -138,11 +105,31 @@ function HRDashboardPage() {
   );
 }
 
-function Legend({ color, label }: { color: string; label: string }) {
+const setup = [
+  { title: "Review course catalog", desc: "Browse compliance, leadership, and skills tracks ready to assign.", icon: BookOpen, to: "/hr/courses" as const, cta: "Browse catalog" },
+  { title: "Assign your first course", desc: "Select audience (departments, teams, individuals), set mandatory and a deadline.", icon: ClipboardList, to: "/hr/assign" as const, cta: "Start assignment" },
+  { title: "Invite learners", desc: "Onboard your workforce so they can access their assigned training.", icon: UserPlus, to: "/hr/reports" as const, cta: "Manage learners" },
+];
+
+function EmptyState({
+  icon: Icon, title, description, primary,
+}: { icon: any; title: string; description: string; primary?: { to: any; label: string; icon: any } }) {
   return (
-    <div className="flex items-center gap-1.5">
-      <span className={`inline-block h-3 w-3 rounded-sm ${color}`} />
-      <span>{label}</span>
+    <div className="flex flex-col items-center text-center py-8 px-4">
+      <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary grid place-items-center mb-3">
+        <Icon className="h-6 w-6" />
+      </div>
+      <div className="font-medium">{title}</div>
+      <p className="text-sm text-muted-foreground mt-1 max-w-md">{description}</p>
+      {primary && (
+        <Button asChild size="sm" className="mt-4">
+          <Link to={primary.to}><primary.icon className="h-4 w-4 mr-1" />{primary.label}</Link>
+        </Button>
+      )}
     </div>
   );
+}
+
+function Skeleton() {
+  return <div className="p-8 max-w-7xl mx-auto"><div className="h-48 rounded-2xl bg-muted animate-pulse" /></div>;
 }
