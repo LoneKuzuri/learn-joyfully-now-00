@@ -16,6 +16,8 @@ export const Route = createFileRoute("/hr")({
 });
 
 function HRLandingPage() {
+  const { allowed } = useAuthGuard("hr");
+  if (!allowed) return null;
   const avgCompletion = Math.round(departments.reduce((s, d) => s + d.completion, 0) / departments.length);
   const totalLearners = departments.reduce((s, d) => s + d.learners, 0);
   const totalOverdue = departments.reduce((s, d) => s + d.overdue, 0);
