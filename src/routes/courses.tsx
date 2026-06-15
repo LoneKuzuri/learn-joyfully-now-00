@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Search, Filter } from "lucide-react";
+import { useAuthGuard } from "@/hooks/use-auth-guard";
 
 export const Route = createFileRoute("/courses")({
   head: () => ({
@@ -22,9 +23,11 @@ const categories = ["All", "Compliance", "Leadership", "Security", "Onboarding",
 const statuses = ["All", "Not started", "In progress", "Completed"] as const;
 
 function CoursesPage() {
+  const { allowed } = useAuthGuard("learner");
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("All");
   const [status, setStatus] = useState<(typeof statuses)[number]>("All");
+  if (!allowed) return null;
 
   const filtered = courses.filter((c) => {
     if (cat !== "All" && c.category !== cat) return false;

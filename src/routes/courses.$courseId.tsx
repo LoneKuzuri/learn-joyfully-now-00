@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle2, Circle, FileText, PlayCircle, Download, MessageSquare, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
+import { useAuthGuard } from "@/hooks/use-auth-guard";
 
 export const Route = createFileRoute("/courses/$courseId")({
   head: ({ params }) => {
