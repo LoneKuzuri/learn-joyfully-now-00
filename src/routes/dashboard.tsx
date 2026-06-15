@@ -1,53 +1,53 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { courses, recentActivity } from "@/lib/lms-data";
+import { useAuthGuard } from "@/hooks/use-auth-guard";
+import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, CheckCircle2, ClipboardList, Award, TrendingUp } from "lucide-react";
+import { BookOpen, CheckCircle2, ClipboardList, Award, ArrowRight, Sparkles, PlayCircle, Search } from "lucide-react";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dashboard — LearnHub" },
-      { name: "description", content: "Track your assignments, progress, and certifications at a glance." },
+      { title: "My Dashboard — LearnHub" },
+      { name: "description", content: "Track your assignments, progress, and certifications." },
     ],
   }),
   component: DashboardPage,
 });
 
 function DashboardPage() {
-  const assigned = courses.filter((c) => c.mandatory);
-  const inProgress = courses.filter((c) => c.progress > 0 && c.progress < 100);
-  const completed = courses.filter((c) => c.progress === 100);
-  const certs = completed.length;
+  const { user, ready, allowed } = useAuthGuard("learner");
+  const { firstTime } = useAuth();
+  if (!ready || !allowed || !user) return <Skeleton />;
 
   const kpis = [
-    { label: "Assigned", value: assigned.length, icon: ClipboardList, color: "text-info", bg: "bg-info/10" },
-    { label: "In progress", value: inProgress.length, icon: BookOpen, color: "text-primary", bg: "bg-primary/10" },
-    { label: "Completed", value: completed.length, icon: CheckCircle2, color: "text-success", bg: "bg-success/10" },
-    { label: "Certificates", value: certs, icon: Award, color: "text-warning", bg: "bg-warning/15" },
+    { label: "Assigned", value: 0, icon: ClipboardList, color: "text-info", bg: "bg-info/10" },
+    { label: "In progress", value: 0, icon: BookOpen, color: "text-primary", bg: "bg-primary/10" },
+    { label: "Completed", value: 0, icon: CheckCircle2, color: "text-success", bg: "bg-success/10" },
+    { label: "Certificates", value: 0, icon: Award, color: "text-warning", bg: "bg-warning/15" },
   ];
 
-  const mandatory = courses.filter((c) => c.mandatory);
-  const optional = courses.filter((c) => !c.mandatory);
-
   return (
-    <div className="p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">My Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Your training at a glance</p>
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight truncate">Welcome, {user.name.split(" ")[0]}</h1>
+          <p className="text-sm text-muted-foreground">Your learning starts here — let's get you set up.</p>
+        </div>
+        {firstTime && <Badge className="shrink-0 gap-1"><Sparkles className="h-3 w-3" /> First login</Badge>}
       </div>
 
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         {kpis.map((k) => (
           <Card key={k.label}>
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="text-sm text-muted-foreground">{k.label}</div>
-                  <div className="text-3xl font-semibold mt-1">{k.value}</div>
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-xs sm:text-sm text-muted-foreground truncate">{k.label}</div>
+                  <div className="text-2xl sm:text-3xl font-semibold mt-1">{k.value}</div>
                 </div>
-                <div className={`p-2 rounded-lg ${k.bg}`}>
+                <div className={`p-2 rounded-lg shrink-0 ${k.bg}`}>
                   <k.icon className={`h-5 w-5 ${k.color}`} />
                 </div>
               </div>
@@ -56,60 +56,58 @@ function DashboardPage() {
         ))}
       </div>
 
+      {/* Empty: assigned courses */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Continue learning</CardTitle>
-          <Link to="/courses" className="text-xs text-primary hover:underline">View all</Link>
+          <Link to="/courses" className="text-xs text-primary hover:underline">Browse courses</Link>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {inProgress.map((c) => (
-            <Link key={c.id} to="/courses/$courseId" params={{ courseId: c.id }} className="rounded-lg border p-4 hover:border-primary hover:shadow-sm transition">
-              <div className="flex gap-3">
-                <img src={c.thumbnail} alt="" className="h-16 w-24 rounded object-cover flex-shrink-0" />
-                <div className="min-w-0">
-                  <div className="text-xs text-muted-foreground">{c.category}</div>
-                  <div className="font-medium text-sm line-clamp-2">{c.title}</div>
-                </div>
-              </div>
-              <div className="mt-3 space-y-1">
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>{c.progress}%</span>
-                  {c.dueDate && <span>Due {c.dueDate}</span>}
-                </div>
-                <Progress value={c.progress} className="h-1.5" />
-              </div>
-            </Link>
-          ))}
+        <CardContent>
+          <EmptyState
+            icon={BookOpen}
+            title="No courses in progress yet"
+            description="Once your HR admin assigns training — or you enroll from the catalog — your courses appear here."
+            primary={{ to: "/courses", label: "Browse catalog", icon: Search }}
+            secondary={{ to: "/courses", label: "Take a sample course", icon: PlayCircle }}
+          />
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
-          <CardHeader><CardTitle className="text-base">Mandatory</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {mandatory.map((c) => <MiniRow key={c.id} course={c} accent="destructive" />)}
+      <div className="grid gap-4 lg:gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader><CardTitle className="text-base">Your learning path</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            {[
+              { title: "Complete your profile", desc: "Add your role and skills for tailored recommendations.", done: false },
+              { title: "Enroll in your first course", desc: "Start with something light from the catalog.", done: false },
+              { title: "Earn your first certificate", desc: "Pass an assessment to unlock a verified credential.", done: false },
+            ].map((s, i) => (
+              <div key={i} className="flex gap-3">
+                <div className={`mt-0.5 h-6 w-6 shrink-0 rounded-full grid place-items-center text-[11px] font-semibold ${s.done ? "bg-success text-success-foreground" : "bg-muted text-muted-foreground"}`}>
+                  {i + 1}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-medium text-sm">{s.title}</div>
+                  <div className="text-xs text-muted-foreground">{s.desc}</div>
+                </div>
+              </div>
+            ))}
+            <Button asChild size="sm" className="mt-2">
+              <Link to="/courses">Start now <ArrowRight className="h-4 w-4 ml-1" /></Link>
+            </Button>
           </CardContent>
         </Card>
-        <Card className="lg:col-span-1">
-          <CardHeader><CardTitle className="text-base">Optional</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {optional.map((c) => <MiniRow key={c.id} course={c} accent="info" />)}
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-1">
-          <CardHeader><CardTitle className="text-base">Recent activity</CardTitle></CardHeader>
+
+        <Card>
+          <CardHeader><CardTitle className="text-base">Certificates</CardTitle></CardHeader>
           <CardContent>
-            <ul className="space-y-3">
-              {recentActivity.map((a) => (
-                <li key={a.id} className="flex gap-3">
-                  <div className="mt-1 h-2 w-2 rounded-full bg-primary flex-shrink-0" />
-                  <div className="flex-1">
-                    <div className="text-sm">{a.text}</div>
-                    <div className="text-xs text-muted-foreground">{a.time}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <EmptyState
+              icon={Award}
+              title="No certificates yet"
+              description="Complete a course and pass its assessment to earn a verifiable certificate you can download or share."
+              primary={{ to: "/certificates", label: "How certificates work", icon: Award }}
+              compact
+            />
           </CardContent>
         </Card>
       </div>
@@ -117,17 +115,46 @@ function DashboardPage() {
   );
 }
 
-function MiniRow({ course, accent }: { course: typeof courses[number]; accent: "destructive" | "info" }) {
+function EmptyState({
+  icon: Icon,
+  title,
+  description,
+  primary,
+  secondary,
+  compact,
+}: {
+  icon: any;
+  title: string;
+  description: string;
+  primary?: { to: any; label: string; icon: any };
+  secondary?: { to: any; label: string; icon: any };
+  compact?: boolean;
+}) {
   return (
-    <Link to="/courses/$courseId" params={{ courseId: course.id }} className="flex items-center gap-3 p-2 -mx-2 rounded hover:bg-accent/40 transition">
-      <div className={`h-9 w-9 rounded flex items-center justify-center bg-${accent}/15`}>
-        <TrendingUp className={`h-4 w-4 text-${accent}`} />
+    <div className={`flex flex-col items-center text-center ${compact ? "py-6" : "py-10"} px-4`}>
+      <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary grid place-items-center mb-3">
+        <Icon className="h-6 w-6" />
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium truncate">{course.title}</div>
-        <div className="text-xs text-muted-foreground">{course.progress}% · {course.duration}</div>
-      </div>
-      {course.progress === 100 && <Badge variant="secondary" className="text-success">Done</Badge>}
-    </Link>
+      <div className="font-medium">{title}</div>
+      <p className="text-sm text-muted-foreground mt-1 max-w-md">{description}</p>
+      {(primary || secondary) && (
+        <div className="mt-4 flex flex-wrap justify-center gap-2">
+          {primary && (
+            <Button asChild size="sm">
+              <Link to={primary.to}><primary.icon className="h-4 w-4 mr-1" />{primary.label}</Link>
+            </Button>
+          )}
+          {secondary && (
+            <Button asChild size="sm" variant="outline">
+              <Link to={secondary.to}><secondary.icon className="h-4 w-4 mr-1" />{secondary.label}</Link>
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
   );
+}
+
+function Skeleton() {
+  return <div className="p-8 max-w-7xl mx-auto"><div className="h-48 rounded-2xl bg-muted animate-pulse" /></div>;
 }

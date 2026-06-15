@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SigninRouteImport } from './routes/signin'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as HrRouteImport } from './routes/hr'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -21,6 +22,11 @@ import { Route as HrCoursesRouteImport } from './routes/hr.courses'
 import { Route as HrAssignRouteImport } from './routes/hr.assign'
 import { Route as CoursesCourseIdRouteImport } from './routes/courses.$courseId'
 
+const SigninRoute = SigninRouteImport.update({
+  id: '/signin',
+  path: '/signin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRoute
   '/hr': typeof HrRouteWithChildren
   '/notifications': typeof NotificationsRoute
+  '/signin': typeof SigninRoute
   '/courses/$courseId': typeof CoursesCourseIdRoute
   '/hr/assign': typeof HrAssignRoute
   '/hr/courses': typeof HrCoursesRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof DashboardRoute
   '/hr': typeof HrRouteWithChildren
   '/notifications': typeof NotificationsRoute
+  '/signin': typeof SigninRoute
   '/courses/$courseId': typeof CoursesCourseIdRoute
   '/hr/assign': typeof HrAssignRoute
   '/hr/courses': typeof HrCoursesRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRoute
   '/hr': typeof HrRouteWithChildren
   '/notifications': typeof NotificationsRoute
+  '/signin': typeof SigninRoute
   '/courses/$courseId': typeof CoursesCourseIdRoute
   '/hr/assign': typeof HrAssignRoute
   '/hr/courses': typeof HrCoursesRoute
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/hr'
     | '/notifications'
+    | '/signin'
     | '/courses/$courseId'
     | '/hr/assign'
     | '/hr/courses'
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/hr'
     | '/notifications'
+    | '/signin'
     | '/courses/$courseId'
     | '/hr/assign'
     | '/hr/courses'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/hr'
     | '/notifications'
+    | '/signin'
     | '/courses/$courseId'
     | '/hr/assign'
     | '/hr/courses'
@@ -166,10 +178,18 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRoute
   HrRoute: typeof HrRouteWithChildren
   NotificationsRoute: typeof NotificationsRoute
+  SigninRoute: typeof SigninRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signin': {
+      id: '/signin'
+      path: '/signin'
+      fullPath: '/signin'
+      preLoaderRoute: typeof SigninRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/notifications': {
       id: '/notifications'
       path: '/notifications'
@@ -284,6 +304,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRoute,
   HrRoute: HrRouteWithChildren,
   NotificationsRoute: NotificationsRoute,
+  SigninRoute: SigninRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

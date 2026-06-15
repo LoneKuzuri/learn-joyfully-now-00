@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
+import { useAuthGuard } from "@/hooks/use-auth-guard";
 
 export const Route = createFileRoute("/hr/reports")({
   head: () => ({ meta: [{ title: "Reports — HR" }] }),
@@ -12,9 +13,11 @@ export const Route = createFileRoute("/hr/reports")({
 });
 
 function ReportsPage() {
+  const { allowed } = useAuthGuard("hr");
+  if (!allowed) return null;
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-end justify-between">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 sm:flex sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
           <p className="text-sm text-muted-foreground">Compliance & completion exports</p>

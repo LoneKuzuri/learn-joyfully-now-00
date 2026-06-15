@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
+import { useAuthGuard } from "@/hooks/use-auth-guard";
 
 export const Route = createFileRoute("/hr/assign")({
   head: () => ({
@@ -37,7 +38,9 @@ const individuals = [
 ];
 
 function AssignPage() {
+  const { allowed } = useAuthGuard("hr");
   const [step, setStep] = useState(0);
+  if (!allowed) return null;
   const [courseId, setCourseId] = useState<string | null>(null);
   const [selDept, setSelDept] = useState<string[]>([]);
   const [selTeams, setSelTeams] = useState<string[]>([]);

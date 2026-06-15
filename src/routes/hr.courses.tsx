@@ -3,6 +3,7 @@ import { courses } from "@/lib/lms-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuthGuard } from "@/hooks/use-auth-guard";
 
 export const Route = createFileRoute("/hr/courses")({
   head: () => ({ meta: [{ title: "Course Catalog — HR" }] }),
@@ -10,9 +11,11 @@ export const Route = createFileRoute("/hr/courses")({
 });
 
 function HRCoursesPage() {
+  const { allowed } = useAuthGuard("hr");
+  if (!allowed) return null;
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-end justify-between">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 sm:flex sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Course Catalog</h1>
           <p className="text-sm text-muted-foreground">{courses.length} active courses</p>

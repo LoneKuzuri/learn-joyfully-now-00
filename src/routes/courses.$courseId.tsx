@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle2, Circle, FileText, PlayCircle, Download, MessageSquare, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
+import { useAuthGuard } from "@/hooks/use-auth-guard";
 
 export const Route = createFileRoute("/courses/$courseId")({
   head: ({ params }) => {
@@ -30,6 +31,7 @@ export const Route = createFileRoute("/courses/$courseId")({
 });
 
 function CoursePlayerPage() {
+  const { allowed } = useAuthGuard("learner");
   const { courseId } = useParams({ from: "/courses/$courseId" });
   const course = courses.find((c) => c.id === courseId)!;
   const [activeId, setActiveId] = useState(course.modules.find((m) => !m.completed)?.id ?? course.modules[0].id);
@@ -40,6 +42,7 @@ function CoursePlayerPage() {
   const activeModule = course.modules.find((m) => m.id === activeId)!;
   const doneCount = Object.values(completed).filter(Boolean).length;
   const progress = Math.round((doneCount / course.modules.length) * 100);
+  if (!allowed) return null;
 
   return (
     <div className="flex flex-col lg:flex-row min-h-[calc(100vh-3.5rem)]">

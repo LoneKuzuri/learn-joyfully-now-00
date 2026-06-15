@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, ClipboardList, BarChart3, AlertTriangle, BookOpen, Plus, Users } from "lucide-react";
+import { useAuthGuard } from "@/hooks/use-auth-guard";
 
 export const Route = createFileRoute("/hr")({
   head: () => ({
@@ -16,6 +17,8 @@ export const Route = createFileRoute("/hr")({
 });
 
 function HRLandingPage() {
+  const { allowed } = useAuthGuard("hr");
+  if (!allowed) return null;
   const avgCompletion = Math.round(departments.reduce((s, d) => s + d.completion, 0) / departments.length);
   const totalLearners = departments.reduce((s, d) => s + d.learners, 0);
   const totalOverdue = departments.reduce((s, d) => s + d.overdue, 0);
