@@ -31,6 +31,7 @@ export const Route = createFileRoute("/courses/$courseId")({
 });
 
 function CoursePlayerPage() {
+  const { allowed } = useAuthGuard("learner");
   const { courseId } = useParams({ from: "/courses/$courseId" });
   const course = courses.find((c) => c.id === courseId)!;
   const [activeId, setActiveId] = useState(course.modules.find((m) => !m.completed)?.id ?? course.modules[0].id);
