@@ -3,6 +3,7 @@ import { courses } from "@/lib/lms-data";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuthGuard } from "@/hooks/use-auth-guard";
 
 export const Route = createFileRoute("/hr/courses")({
   head: () => ({ meta: [{ title: "Course Catalog — HR" }] }),
