@@ -42,6 +42,7 @@ function CoursePlayerPage() {
   const activeModule = course.modules.find((m) => m.id === activeId)!;
   const doneCount = Object.values(completed).filter(Boolean).length;
   const progress = Math.round((doneCount / course.modules.length) * 100);
+  if (!allowed) return null;
 
   return (
     <div className="flex flex-col lg:flex-row min-h-[calc(100vh-3.5rem)]">
