@@ -168,7 +168,7 @@ join public.course_modules m on m.id = z.module_id
 join public.courses c on c.id = m.course_id
 where c.organization_id = public.current_org()
   and (
-    public.can_manage_course()
+    public.can_manage_specific_course(c.id)
     or exists (
       select 1 from public.enrollments e
       where e.course_id = c.id and e.learner_id = auth.uid()
