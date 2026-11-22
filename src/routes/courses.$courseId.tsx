@@ -1,187 +1,141 @@
-import { createFileRoute, Link, useParams, notFound } from "@tanstack/react-router";
-import { useState } from "react";
-import { courses } from "@/lib/lms-data";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { useAuthGuard } from "@/hooks/use-auth-guard";
+import { useAuth } from "@/lib/auth";
+import { getSupabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle2, Circle, FileText, PlayCircle, Download, MessageSquare, ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
-import { useAuthGuard } from "@/hooks/use-auth-guard";
+import { CheckCircle2, Circle, FileText, PlayCircle, ChevronLeft, Loader2, ClipboardCheck } from "lucide-react";
 
 export const Route = createFileRoute("/courses/$courseId")({
-  head: ({ params }) => {
-    const c = courses.find((x) => x.id === params.courseId);
-    return {
-      meta: [
-        { title: `${c?.title ?? "Course"} — LearnHub` },
-        { name: "description", content: c?.description ?? "Course player" },
-      ],
-    };
-  },
+  head: () => ({ meta: [{ title: "Course Player — Learning Hub Connect" }] }),
   component: CoursePlayerPage,
-  notFoundComponent: () => <div className="p-8">Course not found.</div>,
-  loader: ({ params }) => {
-    const c = courses.find((x) => x.id === params.courseId);
-    if (!c) throw notFound();
-    return c;
-  },
 });
+
+type Course = { id: string; title: string; category: string; description: string; passing_score: number };
+type Module = { id: string; title: string; kind: "video"|"scorm"|"pdf"|"text"|"quiz"; content_url: string|null; body: string|null; position: number; estimated_minutes: number };
+type Question = { id: string; prompt: string; kind: "single_choice"|"multiple_choice"|"true_false"; options: unknown; points: number };
+type Quiz = { id: string; module_id: string; max_attempts: number|null };
 
 function CoursePlayerPage() {
   const { allowed } = useAuthGuard("learner");
+  const { user } = useAuth();
   const { courseId } = useParams({ from: "/courses/$courseId" });
-  const course = courses.find((c) => c.id === courseId)!;
-  const [activeId, setActiveId] = useState(course.modules.find((m) => !m.completed)?.id ?? course.modules[0].id);
-  const [completed, setCompleted] = useState<Record<string, boolean>>(
-    Object.fromEntries(course.modules.map((m) => [m.id, m.completed])),
-  );
+  const [course, setCourse] = useState<Course|null>(null);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [enrollmentId, setEnrollmentId] = useState("");
+  const [progress, setProgress] = useState<Record<string,boolean>>({});
+  const [quizzes, setQuizzes] = useState<Record<string,Quiz>>({});
+  const [activeId, setActiveId] = useState("");
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [answers, setAnswers] = useState<Record<string,string[]>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [result, setResult] = useState<{score_percent:number;passed:boolean}|null>(null);
+  const [note,setNote] = useState("");
 
-  const activeModule = course.modules.find((m) => m.id === activeId)!;
-  const doneCount = Object.values(completed).filter(Boolean).length;
-  const progress = Math.round((doneCount / course.modules.length) * 100);
-  if (!allowed) return null;
+  const load = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const supabase = getSupabase();
+      const [courseRes, enrollmentRes, moduleRes] = await Promise.all([
+        supabase.from("courses").select("id,title,category,description,passing_score").eq("id",courseId).single(),
+        supabase.from("enrollments").select("id,status,progress_percent,due_at").eq("course_id",courseId).eq("learner_id",user.id).single(),
+        supabase.from("course_modules").select("id,title,kind,content_url,body,position,estimated_minutes").eq("course_id",courseId).order("position"),
+      ]);
+      if (courseRes.error) throw courseRes.error;
+      if (enrollmentRes.error) throw new Error("This course is not assigned to your account.");
+      if (moduleRes.error) throw moduleRes.error;
+      setCourse(courseRes.data as Course); setEnrollmentId(enrollmentRes.data.id);
+      setModules((moduleRes.data??[]) as Module[]);
+      setActiveId((moduleRes.data??[])[0]?.id??"");
+      const [progressRes, quizRes] = await Promise.all([
+        supabase.from("module_progress").select("module_id,completed_at").eq("enrollment_id",enrollmentRes.data.id),
+        supabase.from("quizzes").select("id,module_id,max_attempts").in("module_id",(moduleRes.data??[]).filter((m)=>m.kind==="quiz").map((m)=>m.id)),
+      ]);
+      if (progressRes.error) throw progressRes.error;
+      if (quizRes.error) throw quizRes.error;
+      setProgress(Object.fromEntries((progressRes.data??[]).filter((p)=>p.completed_at).map((p)=>[p.module_id,true])));
+      setQuizzes(Object.fromEntries((quizRes.data??[]).map((q)=>[q.module_id,q as Quiz])));
+    } catch(error) { toast.error(error instanceof Error?error.message:"Unable to load course"); }
+    finally { setLoading(false); }
+  };
 
-  return (
-    <div className="flex flex-col lg:flex-row min-h-[calc(100vh-3.5rem)]">
-      {/* Modules sidebar */}
-      <aside className="lg:w-80 border-r bg-card">
-        <div className="p-4 border-b">
-          <Link to="/courses" className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground">
-            <ChevronLeft className="h-3.5 w-3.5" /> Back to courses
-          </Link>
-          <div className="mt-2 text-xs text-muted-foreground">{course.category}</div>
-          <h2 className="font-semibold leading-tight">{course.title}</h2>
-          <div className="mt-3 space-y-1">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{doneCount}/{course.modules.length} modules</span>
-              <span>{progress}%</span>
-            </div>
-            <Progress value={progress} className="h-1.5" />
-          </div>
-        </div>
-        <nav className="p-2">
-          {course.modules.map((m, i) => {
-            const isDone = completed[m.id];
-            const isActive = m.id === activeId;
-            return (
-              <button
-                key={m.id}
-                onClick={() => setActiveId(m.id)}
-                className={`w-full text-left flex items-start gap-3 p-3 rounded-md text-sm transition ${
-                  isActive ? "bg-primary/10 text-primary" : "hover:bg-accent/40"
-                }`}
-              >
-                {isDone ? (
-                  <CheckCircle2 className="h-4 w-4 mt-0.5 text-success flex-shrink-0" />
-                ) : (
-                  <Circle className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium leading-tight">{i + 1}. {m.title}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5 capitalize">{m.type} · {m.duration}</div>
-                </div>
-              </button>
-            );
-          })}
-        </nav>
-      </aside>
+  useEffect(()=>{if(allowed&&user) void load();},[allowed,user?.id,courseId]);
 
-      {/* Player */}
-      <div className="flex-1 p-6 lg:p-8 space-y-6 max-w-4xl">
-        <div>
-          <Badge variant="secondary" className="capitalize">{activeModule.type}</Badge>
-          <h1 className="text-2xl font-semibold tracking-tight mt-2">{activeModule.title}</h1>
-          <p className="text-sm text-muted-foreground">{activeModule.duration} · Instructor: {course.instructor}</p>
-        </div>
+  const active = modules.find((m)=>m.id===activeId);
+  const doneCount = modules.filter((m)=>progress[m.id]).length;
+  const percent = modules.length?Math.round(doneCount/modules.length*100):0;
 
-        <Card className="overflow-hidden">
-          <div className="aspect-video bg-gradient-to-br from-slate-900 to-slate-700 flex items-center justify-center text-white">
-            <div className="text-center">
-              {activeModule.type === "pdf" ? (
-                <FileText className="h-16 w-16 mx-auto mb-3 opacity-80" />
-              ) : (
-                <PlayCircle className="h-20 w-20 mx-auto mb-3 opacity-90" />
-              )}
-              <div className="text-sm opacity-80">
-                {activeModule.type === "video" && "Video lesson"}
-                {activeModule.type === "scorm" && "SCORM interactive content"}
-                {activeModule.type === "pdf" && "PDF document"}
-                {activeModule.type === "quiz" && "Knowledge check"}
-              </div>
-            </div>
-          </div>
-        </Card>
+  useEffect(()=>{
+    const run=async()=>{
+      if(!active||active.kind!=="quiz"){setQuestions([]);return;}
+      const quiz=quizzes[active.id];
+      if(!quiz){setQuestions([]);return;}
+      const {data,error}=await getSupabase().from("learner_quiz_questions").select("id,prompt,kind,options,points").eq("quiz_id",quiz.id).order("position");
+      if(error){toast.error(error.message);return;}
+      setQuestions((data??[]) as Question[]);setAnswers({});setResult(null);
+    };
+    void run();
+  },[activeId,quizzes]);
 
-        <div className="flex flex-wrap gap-3">
-          <Button
-            onClick={() => {
-              setCompleted((p) => ({ ...p, [activeId]: true }));
-              toast.success("Module marked complete");
-              const idx = course.modules.findIndex((m) => m.id === activeId);
-              if (idx < course.modules.length - 1) setActiveId(course.modules[idx + 1].id);
-            }}
-            disabled={completed[activeId]}
-          >
-            <CheckCircle2 className="h-4 w-4 mr-1.5" />
-            {completed[activeId] ? "Module completed" : "Mark complete & continue"}
-          </Button>
-          <Button variant="outline"><Download className="h-4 w-4 mr-1.5" /> Resources</Button>
-        </div>
+  const completeModule=async()=>{
+    if(!active||!enrollmentId)return;
+    setSaving(true);
+    try{
+      const {error}=await getSupabase().rpc("complete_learning_module",{p_enrollment_id:enrollmentId,p_module_id:active.id,p_position_seconds:0});
+      if(error)throw error;
+      setProgress((current)=>({...current,[active.id]:true}));
+      toast.success("Module completed");
+      const next=modules.find((m)=>!progress[m.id]&&m.id!==active.id);
+      if(next)setActiveId(next.id);
+      else await load();
+    }catch(error){toast.error(error instanceof Error?error.message:"Unable to save progress");}
+    finally{setSaving(false);}
+  };
 
-        <Tabs defaultValue="notes">
-          <TabsList>
-            <TabsTrigger value="notes">Notes</TabsTrigger>
-            <TabsTrigger value="resources">Resources</TabsTrigger>
-            <TabsTrigger value="discussion">Discussion</TabsTrigger>
-          </TabsList>
-          <TabsContent value="notes" className="mt-4">
-            <Card>
-              <CardContent className="p-4">
-                <Textarea placeholder="Take notes for this module…" rows={5} />
-                <Button size="sm" className="mt-3">Save note</Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="resources" className="mt-4">
-            <Card>
-              <CardContent className="p-4 space-y-2">
-                {["Slide deck.pdf", "Reference handbook.pdf", "Worked examples.xlsx"].map((r) => (
-                  <div key={r} className="flex items-center justify-between p-2 rounded hover:bg-accent/40">
-                    <div className="flex items-center gap-2 text-sm"><FileText className="h-4 w-4 text-muted-foreground" /> {r}</div>
-                    <Button size="sm" variant="ghost"><Download className="h-4 w-4" /></Button>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          <TabsContent value="discussion" className="mt-4">
-            <Card>
-              <CardHeader><CardTitle className="text-sm flex items-center gap-2"><MessageSquare className="h-4 w-4" /> Cohort discussion</CardTitle></CardHeader>
-              <CardContent className="space-y-3">
-                <DiscussionPost name="Priya N." time="3h ago" text="Great breakdown in section 2 — the GDPR examples really clicked." />
-                <DiscussionPost name="Marco R." time="Yesterday" text="Anyone else struggle with module 3? Let's pair up." />
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
-  );
-}
+  const submitQuiz=async()=>{
+    if(!active||!enrollmentId)return;
+    const quiz=quizzes[active.id];
+    if(!quiz){toast.error("Assessment is not configured yet.");return;}
+    setSaving(true);
+    try{
+      const {data,error}=await getSupabase().rpc("submit_quiz_attempt",{p_enrollment_id:enrollmentId,p_quiz_id:quiz.id,p_answers:answers});
+      if(error)throw error;
+      const scored=data as {score_percent:number;passed:boolean;progress_percent:number};
+      setResult({score_percent:scored.score_percent,passed:scored.passed});
+      if(scored.passed){setProgress((current)=>({...current,[active.id]:true}));toast.success("Assessment passed");}
+      else toast.error("Assessment not passed. Review the material and try again.");
+    }catch(error){toast.error(error instanceof Error?error.message:"Unable to submit assessment");}
+    finally{setSaving(false);}
+  };
 
-function DiscussionPost({ name, time, text }: { name: string; time: string; text: string }) {
-  return (
-    <div className="flex gap-3">
-      <div className="h-8 w-8 rounded-full bg-primary/15 text-primary flex items-center justify-center text-xs font-semibold flex-shrink-0">
-        {name.charAt(0)}
-      </div>
-      <div className="flex-1">
-        <div className="text-xs"><span className="font-medium">{name}</span> <span className="text-muted-foreground">· {time}</span></div>
-        <div className="text-sm mt-0.5">{text}</div>
-      </div>
-    </div>
-  );
+  if(!allowed)return null;
+  if(loading)return <div className="p-8 text-sm text-muted-foreground">Loading your course…</div>;
+  if(!course||!enrollmentId)return <div className="p-8 space-y-3"><p className="font-medium">Course unavailable</p><p className="text-sm text-muted-foreground">This course may not be assigned to your account.</p><Button asChild variant="outline"><Link to="/courses">Back to my courses</Link></Button></div>;
+
+  return <div className="flex flex-col lg:flex-row min-h-[calc(100vh-3.5rem)]">
+    <aside className="lg:w-80 border-r bg-card">
+      <div className="p-4 border-b"><Link to="/courses" className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground"><ChevronLeft className="h-3.5 w-3.5"/>Back to courses</Link><div className="mt-2 text-xs text-muted-foreground">{course.category}</div><h2 className="font-semibold leading-tight">{course.title}</h2><div className="mt-3 space-y-1"><div className="flex justify-between text-xs text-muted-foreground"><span>{doneCount}/{modules.length} modules</span><span>{percent}%</span></div><Progress value={percent} className="h-1.5"/></div></div>
+      <nav className="p-2">{modules.map((module,index)=><button type="button" key={module.id} onClick={()=>setActiveId(module.id)} className={"w-full text-left flex items-start gap-3 p-3 rounded-md text-sm transition "+(activeId===module.id?"bg-primary/10 text-primary":"hover:bg-accent/40")}>{progress[module.id]?<CheckCircle2 className="h-4 w-4 mt-0.5 text-success shrink-0"/>:<Circle className="h-4 w-4 mt-0.5 text-muted-foreground shrink-0"/>}<span className="flex-1 min-w-0"><span className="block font-medium">{index+1}. {module.title}</span><span className="text-xs text-muted-foreground capitalize">{module.kind} · {module.estimated_minutes} min</span></span></button>)}</nav>
+    </aside>
+    <main className="flex-1 p-6 lg:p-8 space-y-6 max-w-4xl">
+      {active&&<><div><Badge variant="secondary" className="capitalize">{active.kind}</Badge><h1 className="text-2xl font-semibold tracking-tight mt-2">{active.title}</h1><p className="text-sm text-muted-foreground">{active.estimated_minutes} minutes · Course pass mark {course.passing_score}%</p></div>
+      {active.kind==="quiz"?<Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><ClipboardCheck className="h-5 w-5"/> Knowledge assessment</CardTitle></CardHeader><CardContent className="space-y-6">
+        {questions.length===0?<p className="text-sm text-muted-foreground">No questions have been added to this assessment yet.</p>:questions.map((question,index)=>{
+          const options=Array.isArray(question.options)?question.options.map((option)=>typeof option==="string"?{value:option,label:option}:{value:String((option as {value?:string;id?:string}).value??(option as {id?:string}).id??""),label:String((option as {label?:string;text?:string}).label??(option as {text?:string}).text??"")}):[];
+          return <div key={question.id} className="space-y-3"><div className="font-medium">{index+1}. {question.prompt}</div><div className="space-y-2">{options.map((option)=><label key={option.value} className="flex items-center gap-2 rounded-md border p-3 text-sm cursor-pointer hover:bg-muted/50"><input type={question.kind==="multiple_choice"?"checkbox":"radio"} name={question.id} checked={(answers[question.id]??[]).includes(option.value)} onChange={(event)=>setAnswers((current)=>({...current,[question.id]:question.kind==="multiple_choice"?(event.target.checked?[...(current[question.id]??[]),option.value]:(current[question.id]??[]).filter((v)=>v!==option.value)):[option.value]}))}/>{option.label}</label>)}</div></div>;
+        })}
+        {result&&<div className={"rounded-lg border p-4 "+(result.passed?"border-success/40 bg-success/5":"border-warning/40 bg-warning/5")}><div className="font-semibold">{result.passed?"Assessment passed":"Assessment not passed"}</div><p className="text-sm mt-1">Your score: {result.score_percent}% · Required: {course.passing_score}%</p></div>}
+        <Button onClick={()=>void submitQuiz()} disabled={saving||questions.length===0||!!result?.passed}>{saving&&<Loader2 className="h-4 w-4 mr-2 animate-spin"/>}Submit assessment</Button>
+      </CardContent></Card>:<><Card className="overflow-hidden"><div className="min-h-64 bg-muted flex items-center justify-center p-8 text-center">{active.content_url?(active.kind==="video"?<video controls className="max-h-[480px] w-full" src={active.content_url}/> : <a className="text-primary underline" href={active.content_url} target="_blank" rel="noreferrer">Open learning resource</a>):active.kind==="pdf"?<FileText className="h-16 w-16 text-muted-foreground"/>:<PlayCircle className="h-16 w-16 text-muted-foreground"/>}</div></Card><Card><CardContent className="p-5 prose prose-sm max-w-none whitespace-pre-wrap">{active.body||"Your instructor has not added lesson content yet."}</CardContent></Card><div className="flex flex-wrap gap-3"><Button onClick={()=>void completeModule()} disabled={saving||!!progress[active.id]}>{saving&&<Loader2 className="h-4 w-4 mr-2 animate-spin"/>}<CheckCircle2 className="h-4 w-4 mr-2"/>{progress[active.id]?"Module completed":"Mark complete & continue"}</Button></div></>}
+      </>}
+      <Card><CardHeader><CardTitle className="text-sm">Personal notes</CardTitle></CardHeader><CardContent><Textarea placeholder="Keep notes for this lesson…" rows={4} value={note} onChange={(e)=>setNote(e.target.value)}/><p className="text-xs text-muted-foreground mt-2">Notes are currently kept in this session only.</p></CardContent></Card>
+    </main>
+  </div>;
 }
