@@ -138,7 +138,7 @@ function RootComponent() {
 
 function AppShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isAuthRoute = pathname === "/signin";
+  const isAuthRoute = pathname === "/signin" || pathname.startsWith("/verify/");
 
   if (isAuthRoute) {
     return <Outlet />;
