@@ -33,7 +33,12 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 const ONBOARDED_KEY = "learnhub.onboarded.v2";
 
 function initials(name: string) {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
 }
 
 async function loadProfile(userId: string): Promise<AuthUser> {
@@ -45,13 +50,16 @@ async function loadProfile(userId: string): Promise<AuthUser> {
     .single();
 
   if (error || !data) {
-    throw new Error(error?.message ?? "Your account profile has not been provisioned. Contact your organization administrator.");
+    throw new Error(
+      error?.message ??
+        "Your account profile has not been provisioned. Contact your organization administrator.",
+    );
   }
 
   const name = data.full_name || data.email;
   const department = Array.isArray(data.departments)
-    ? (data.departments[0] as { name?: string } | undefined)?.name ?? "No department"
-    : (data.departments as { name?: string } | null)?.name ?? "No department";
+    ? ((data.departments[0] as { name?: string } | undefined)?.name ?? "No department")
+    : ((data.departments as { name?: string } | null)?.name ?? "No department");
 
   return {
     id: data.id,
@@ -117,36 +125,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const value = useMemo<AuthState>(() => ({
-    user,
-    ready,
-    firstTime: user ? !onboardedRoles[user.role] : false,
-    configured: isSupabaseConfigured,
-    login: async (email, password) => {
-      if (!isSupabaseConfigured) {
-        throw new Error("Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local.");
-      }
-      const supabase = getSupabase();
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      if (!data.user) throw new Error("Sign-in did not return a user.");
-      const profile = await loadProfile(data.user.id);
-      setUser(profile);
-    },
-    logout: async () => {
-      if (isSupabaseConfigured) {
-        const { error } = await getSupabase().auth.signOut();
+  const value = useMemo<AuthState>(
+    () => ({
+      user,
+      ready,
+      firstTime: user ? !onboardedRoles[user.role] : false,
+      configured: isSupabaseConfigured,
+      login: async (email, password) => {
+        if (!isSupabaseConfigured) {
+          throw new Error(
+            "Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to .env.local.",
+          );
+        }
+        const supabase = getSupabase();
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-      }
-      setUser(null);
-    },
-    markOnboarded: () => {
-      if (!user) return;
-      const next = { ...onboardedRoles, [user.role]: true };
-      localStorage.setItem(ONBOARDED_KEY, JSON.stringify(next));
-      setOnboardedRoles(next);
-    },
-  }), [user, ready, onboardedRoles]);
+        if (!data.user) throw new Error("Sign-in did not return a user.");
+        const profile = await loadProfile(data.user.id);
+        setUser(profile);
+      },
+      logout: async () => {
+        if (isSupabaseConfigured) {
+          const { error } = await getSupabase().auth.signOut();
+          if (error) throw error;
+        }
+        setUser(null);
+      },
+      markOnboarded: () => {
+        if (!user) return;
+        const next = { ...onboardedRoles, [user.role]: true };
+        localStorage.setItem(ONBOARDED_KEY, JSON.stringify(next));
+        setOnboardedRoles(next);
+      },
+    }),
+    [user, ready, onboardedRoles],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
@@ -158,7 +171,9 @@ export function useAuth() {
 }
 
 export function isOrganizationAdmin(role: Role) {
-  return role === "platform_super_admin" || role === "organization_admin" || role === "hr_coordinator";
+  return (
+    role === "platform_super_admin" || role === "organization_admin" || role === "hr_coordinator"
+  );
 }
 
 export function canManageCourses(role: Role) {

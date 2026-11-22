@@ -31,9 +31,26 @@ function LandingPage() {
   const { user, ready, allowed } = useAuthGuard();
   if (!ready || !allowed || !user) return <PageSkeleton />;
 
-  const isHR = isOrganizationAdmin(user.role) || user.role === "department_manager" || user.role === "trainer";
-  const primaryDestination = user.role === "platform_super_admin" ? "/platform/organizations" : user.role === "department_manager" ? "/hr/reports" : user.role === "trainer" ? "/hr/courses" : isHR ? "/hr/dashboard" : "/dashboard";
-  const secondaryDestination = user.role === "platform_super_admin" ? "/platform/organizations" : user.role === "trainer" ? "/hr/courses" : isHR ? "/hr/assign" : "/courses";
+  const isHR =
+    isOrganizationAdmin(user.role) || user.role === "department_manager" || user.role === "trainer";
+  const primaryDestination =
+    user.role === "platform_super_admin"
+      ? "/platform/organizations"
+      : user.role === "department_manager"
+        ? "/hr/reports"
+        : user.role === "trainer"
+          ? "/hr/courses"
+          : isHR
+            ? "/hr/dashboard"
+            : "/dashboard";
+  const secondaryDestination =
+    user.role === "platform_super_admin"
+      ? "/platform/organizations"
+      : user.role === "trainer"
+        ? "/hr/courses"
+        : isHR
+          ? "/hr/assign"
+          : "/courses";
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
@@ -56,7 +73,11 @@ function LandingPage() {
                 Go to my dashboard <ArrowRight className="h-4 w-4 ml-1" />
               </Link>
             </Button>
-            <Button asChild variant="outline" className="bg-transparent border-white/30 text-primary-foreground hover:bg-white/10 hover:text-primary-foreground">
+            <Button
+              asChild
+              variant="outline"
+              className="bg-transparent border-white/30 text-primary-foreground hover:bg-white/10 hover:text-primary-foreground"
+            >
               <Link to={secondaryDestination}>
                 {isHR ? "Assign first course" : "Browse catalog"}
               </Link>
@@ -80,14 +101,18 @@ function LandingPage() {
                 <div className="h-9 w-9 rounded-lg bg-primary/10 grid place-items-center text-primary">
                   <s.icon className="h-5 w-5" />
                 </div>
-                <Badge variant="outline" className="text-[10px]">Step {s.step}</Badge>
+                <Badge variant="outline" className="text-[10px]">
+                  Step {s.step}
+                </Badge>
               </div>
               <div>
                 <div className="font-medium">{s.title}</div>
                 <p className="text-sm text-muted-foreground">{s.desc}</p>
               </div>
               <Button asChild variant="ghost" size="sm" className="-ml-2 text-primary">
-                <Link to={s.to}>{s.cta} <ArrowRight className="h-4 w-4 ml-1" /></Link>
+                <Link to={s.to}>
+                  {s.cta} <ArrowRight className="h-4 w-4 ml-1" />
+                </Link>
               </Button>
             </CardContent>
           </Card>
@@ -100,14 +125,18 @@ function LandingPage() {
             {isHR ? <ShieldCheck className="h-6 w-6" /> : <GraduationCap className="h-6 w-6" />}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-medium">{isHR ? "Need a guided tour?" : "New here? Watch the 2-minute intro"}</div>
+            <div className="font-medium">
+              {isHR ? "Need a guided tour?" : "New here? Watch the 2-minute intro"}
+            </div>
             <p className="text-sm text-muted-foreground">
               {isHR
                 ? "We'll walk you through assignment workflows, deadlines and reporting."
                 : "See how to navigate your courses, take assessments and download certificates."}
             </p>
           </div>
-          <Button variant="outline" className="gap-2 shrink-0"><PlayCircle className="h-4 w-4" /> Start tour</Button>
+          <Button variant="outline" className="gap-2 shrink-0">
+            <PlayCircle className="h-4 w-4" /> Start tour
+          </Button>
         </CardContent>
       </Card>
     </div>
@@ -115,18 +144,71 @@ function LandingPage() {
 }
 
 const learnerSteps = [
-  { step: 1, title: "Open your dashboard", desc: "See assigned courses and deadlines in one place.", icon: BookOpen, to: "/dashboard" as const, cta: "Go to dashboard" },
-  { step: 2, title: "Browse the catalog", desc: "Discover optional courses by category and skill.", icon: Sparkles, to: "/courses" as const, cta: "Browse courses" },
-  { step: 3, title: "Earn certificates", desc: "Complete assessments to unlock verified credentials.", icon: Award, to: "/certificates" as const, cta: "View certificates" },
+  {
+    step: 1,
+    title: "Open your dashboard",
+    desc: "See assigned courses and deadlines in one place.",
+    icon: BookOpen,
+    to: "/dashboard" as const,
+    cta: "Go to dashboard",
+  },
+  {
+    step: 2,
+    title: "Browse the catalog",
+    desc: "Discover optional courses by category and skill.",
+    icon: Sparkles,
+    to: "/courses" as const,
+    cta: "Browse courses",
+  },
+  {
+    step: 3,
+    title: "Earn certificates",
+    desc: "Complete assessments to unlock verified credentials.",
+    icon: Award,
+    to: "/certificates" as const,
+    cta: "View certificates",
+  },
 ];
 
 const hrSteps = [
-  { step: 1, title: "Review the course catalog", desc: "Pick from compliance, leadership, and skills tracks.", icon: BookOpen, to: "/hr/courses" as const, cta: "View catalog" },
-  { step: 2, title: "Assign your first course", desc: "Choose audience, deadline and mandatory status.", icon: ClipboardList, to: "/hr/assign" as const, cta: "Start assignment" },
-  { step: 3, title: "Open the analytics dashboard", desc: "Track completion across teams and departments.", icon: BarChart3, to: "/hr/dashboard" as const, cta: "Open dashboard" },
-  { step: 4, title: "Spot overdue learners early", desc: "Send reminders before deadlines slip.", icon: Users, to: "/hr/reports" as const, cta: "View reports" },
+  {
+    step: 1,
+    title: "Review the course catalog",
+    desc: "Pick from compliance, leadership, and skills tracks.",
+    icon: BookOpen,
+    to: "/hr/courses" as const,
+    cta: "View catalog",
+  },
+  {
+    step: 2,
+    title: "Assign your first course",
+    desc: "Choose audience, deadline and mandatory status.",
+    icon: ClipboardList,
+    to: "/hr/assign" as const,
+    cta: "Start assignment",
+  },
+  {
+    step: 3,
+    title: "Open the analytics dashboard",
+    desc: "Track completion across teams and departments.",
+    icon: BarChart3,
+    to: "/hr/dashboard" as const,
+    cta: "Open dashboard",
+  },
+  {
+    step: 4,
+    title: "Spot overdue learners early",
+    desc: "Send reminders before deadlines slip.",
+    icon: Users,
+    to: "/hr/reports" as const,
+    cta: "View reports",
+  },
 ];
 
 function PageSkeleton() {
-  return <div className="p-8 max-w-7xl mx-auto"><div className="h-48 rounded-2xl bg-muted animate-pulse" /></div>;
+  return (
+    <div className="p-8 max-w-7xl mx-auto">
+      <div className="h-48 rounded-2xl bg-muted animate-pulse" />
+    </div>
+  );
 }

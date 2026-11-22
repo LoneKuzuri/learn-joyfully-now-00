@@ -7,7 +7,8 @@ type RequiredRole = Role | "hr" | "admin" | "learner";
 function isAllowed(role: Role, required?: RequiredRole) {
   if (!required) return true;
   if (required === "admin") return isOrganizationAdmin(role);
-  if (required === "hr") return isOrganizationAdmin(role) || role === "department_manager" || role === "trainer";
+  if (required === "hr")
+    return isOrganizationAdmin(role) || role === "department_manager" || role === "trainer";
   if (required === "learner") return role === "learner" || role === "trainer";
   return role === required;
 }
