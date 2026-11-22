@@ -277,7 +277,7 @@ declare
   cert_code text;
 begin
   select * into e from public.enrollments
-  where id=p_enrollment_id and learner_id=auth.uid() and status <> 'cancelled';
+  where id=p_enrollment_id and learner_id=auth.uid() and status <> 'waived';
   if e.id is null then raise exception 'Enrollment not found'; end if;
   select * into m from public.course_modules
   where id=p_module_id and course_id=e.course_id;
@@ -339,7 +339,7 @@ declare
   cert_code text;
 begin
   select * into e from public.enrollments
-  where id=p_enrollment_id and learner_id=auth.uid() and status <> 'cancelled';
+  where id=p_enrollment_id and learner_id=auth.uid() and status <> 'waived';
   if e.id is null then raise exception 'Enrollment not found'; end if;
   select z.* into q from public.quizzes z
     join public.course_modules m on m.id=z.module_id
