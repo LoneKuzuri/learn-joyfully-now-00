@@ -219,7 +219,7 @@ begin
     allow_self_unenroll, due_at, published_at, status
   ) values (
     actor.organization_id, p_course_id, actor.id, nullif(trim(p_title), ''),
-    coalesce(p_is_mandatory, true), coalesce(p_allow_self_unenroll, false),
+    coalesce(p_is_mandatory, true), case when coalesce(p_is_mandatory, true) then false else coalesce(p_allow_self_unenroll, false) end,
     p_due_at, now(), 'active'
   ) returning id into assignment_id;
 
