@@ -142,8 +142,7 @@ function HRCoursesPage() {
             <div className="space-y-2"><Label htmlFor="module-titles">Learning modules (one per line, use Title :: lesson content)</Label><Textarea id="module-titles" rows={5} value={modulesText} onChange={(e) => setModulesText(e.target.value)} /><p className="text-xs text-muted-foreground">Use “Title :: content” to add text content to each lesson.</p>
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={includeQuiz} onChange={(e) => setIncludeQuiz(e.target.checked)} /> Include a final assessment (3 attempts)</label>
             {includeQuiz && <div className="space-y-2"><Label htmlFor="quiz-questions">Assessment questions</Label><Textarea id="quiz-questions" rows={5} value={quizQuestionsText} onChange={(e) => setQuizQuestionsText(e.target.value)} /><p className="text-xs text-muted-foreground">One question per line: Question | Option A | Option B | Correct option. The correct option must exactly match one of the choices.</p></div>}
-            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={includeQuiz} onChange={(e) => setIncludeQuiz(e.target.checked)} /> Include a final assessment (3 attempts)</label>
-            {includeQuiz && <div className="space-y-2"><Label htmlFor="quiz-questions">Assessment questions</Label><Textarea id="quiz-questions" rows={5} value={quizQuestionsText} onChange={(e) => setQuizQuestionsText(e.target.value)} /><p className="text-xs text-muted-foreground">One question per line: Question | Option A | Option B | Correct option. The correct option must exactly match one of the choices.</p></div>}</div>
+</div>
             <div className="flex justify-end"><Button type="submit" disabled={saving || !title.trim()}>{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{saving ? "Saving…" : "Create course"}</Button></div>
           </form>
         </CardContent></Card>
