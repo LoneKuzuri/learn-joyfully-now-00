@@ -33,6 +33,10 @@ for select using (
   or public.is_platform_admin()
   or (organization_id = public.current_org() and public.can_manage_org())
   or (organization_id = public.current_org() and public.current_role() = 'department_manager' and department_id = public.current_department())
+  or (organization_id = public.current_org() and public.current_role() = 'trainer' and exists (
+    select 1 from public.enrollments e join public.courses c on c.id=e.course_id
+    where e.learner_id=profiles.id and c.instructor_id=auth.uid()
+  ))
 );
 
 drop policy if exists "learners read own enrollments managers read org" on public.enrollments;
@@ -42,6 +46,9 @@ using (
   or (organization_id = public.current_org() and public.can_manage_org())
   or (public.current_role() = 'department_manager' and exists (
     select 1 from public.profiles p where p.id = learner_id and p.department_id = public.current_department()
+  ))
+  or (public.current_role() = 'trainer' and exists (
+    select 1 from public.courses c where c.id=enrollments.course_id and c.instructor_id=auth.uid()
   ))
   or public.is_platform_admin()
 );
