@@ -69,6 +69,43 @@ using (
   or public.is_platform_admin()
 );
 
+drop policy if exists "org teams manage" on public.teams;
+create policy "org teams manage" on public.teams for all
+using (organization_id = public.current_org() and public.can_manage_org())
+with check (
+  organization_id = public.current_org() and public.can_manage_org()
+  and (department_id is null or exists(
+    select 1 from public.departments d where d.id=department_id and d.organization_id=public.current_org()
+  ))
+);
+
+drop policy if exists "team membership org access" on public.team_members;
+create policy "team membership org access" on public.team_members for all
+using (exists(
+  select 1 from public.teams t
+  where t.id=team_id and t.organization_id=public.current_org() and public.can_manage_org()
+))
+with check (exists(
+  select 1 from public.teams t
+  join public.profiles p on p.id=profile_id
+  where t.id=team_id and t.organization_id=public.current_org()
+    and p.organization_id=t.organization_id and public.can_manage_org()
+));
+
+drop policy if exists "course managers create" on public.courses;
+create policy "course managers create" on public.courses for insert
+with check (
+  organization_id=public.current_org() and public.can_manage_course() and created_by=auth.uid()
+  and (instructor_id is null or exists(select 1 from public.profiles p where p.id=instructor_id and p.organization_id=public.current_org()))
+);
+drop policy if exists "course managers update" on public.courses;
+create policy "course managers update" on public.courses for update
+using (organization_id=public.current_org() and public.can_manage_course())
+with check (
+  organization_id=public.current_org() and public.can_manage_course()
+  and (instructor_id is null or exists(select 1 from public.profiles p where p.id=instructor_id and p.organization_id=public.current_org()))
+);
+
 create policy "learners read own module progress" on public.module_progress for select
 using (exists(select 1 from public.enrollments e where e.id=enrollment_id and (e.learner_id=auth.uid() or (e.organization_id=public.current_org() and public.can_manage_org()) or (public.current_role()='department_manager' and exists(select 1 from public.profiles p where p.id=e.learner_id and p.department_id=public.current_department())))));
 
