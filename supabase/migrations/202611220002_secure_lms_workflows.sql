@@ -122,6 +122,18 @@ with check (
   and (instructor_id is null or exists(select 1 from public.profiles p where p.id=instructor_id and p.organization_id=public.current_org()))
 );
 
+drop policy if exists "modules visible with course" on public.course_modules;
+create policy "modules visible to enrolled learners and course managers" on public.course_modules for select
+using (exists(
+  select 1 from public.courses c
+  where c.id=course_id and c.organization_id=public.current_org()
+    and (
+      public.can_manage_org()
+      or (public.current_role()='trainer' and c.instructor_id=auth.uid())
+      or exists(select 1 from public.enrollments e where e.course_id=c.id and e.learner_id=auth.uid())
+    )
+));
+
 drop policy if exists "course managers manage modules" on public.course_modules;
 create policy "course managers manage modules" on public.course_modules for all
 using (public.can_manage_specific_course(course_id))
