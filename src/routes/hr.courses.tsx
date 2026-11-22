@@ -34,7 +34,9 @@ function HRCoursesPage() {
   const [description, setDescription] = useState("");
   const [minutes, setMinutes] = useState("30");
   const [passingScore, setPassingScore] = useState("70");
-  const [modulesText, setModulesText] = useState("Introduction\nKey concepts\nKnowledge check");
+  const [modulesText, setModulesText] = useState("Introduction :: Add the key learning points for this lesson.\nKey concepts :: Explain the core concepts and examples.");
+  const [includeQuiz, setIncludeQuiz] = useState(true);
+  const [quizQuestionsText, setQuizQuestionsText] = useState("Which option best describes the purpose of this training? | Build awareness | Ignore procedures | Build awareness\nWhat should a learner do when unsure? | Ask for guidance | Guess | Ask for guidance");
   const [status, setStatus] = useState<"draft" | "published">("draft");
   const canCreate = !!user && canManageCourses(user.role);
 
@@ -56,8 +58,14 @@ function HRCoursesPage() {
   const createCourse = async (event: FormEvent) => {
     event.preventDefault();
     if (!user?.organizationId) { toast.error("Your account is not linked to an organization."); return; }
-    const moduleTitles = modulesText.split("\n").map((item) => item.trim()).filter(Boolean);
-    if (!moduleTitles.length) { toast.error("Add at least one learning module."); return; }
+    const moduleItems = modulesText.split("\n").map((line) => {
+      const [moduleTitle, ...bodyParts] = line.split("::");
+      return { title: moduleTitle.trim(), body: bodyParts.join("::").trim() };
+    }).filter((item) => item.title);
+    if (!moduleItems.length) { toast.error("Add at least one learning module."); return; }
+    const questions = quizQuestionsText.split("\n").map((line) => line.split("|").map((part) => part.trim())).filter((parts) => parts.length >= 4 && parts[0]);
+    if (includeQuiz && !questions.length) { toast.error("Add at least one assessment question in the required format."); return; }
+    if (includeQuiz && questions.some((parts) => !parts.slice(1, -1).includes(parts[parts.length - 1]))) { toast.error("Each correct answer must exactly match one of its answer options."); return; }
     setSaving(true);
     try {
       const supabase = getSupabase();
@@ -70,7 +78,7 @@ function HRCoursesPage() {
         status,
       }).select("id").single();
       if (error) throw error;
-      const modules = moduleItems.map((item, index) => ({
+      const modules: { course_id: string; title: string; kind: "text" | "quiz"; position: number; estimated_minutes: number; is_required: boolean; body: string }[] = moduleItems.map((item, index) => ({
         course_id: course.id, title: item.title, kind: "text" as const,
         position: index, estimated_minutes: 10, is_required: true,
         body: item.body || "Your instructor has not added lesson content yet.",
@@ -124,6 +132,8 @@ function HRCoursesPage() {
               <div className="space-y-2"><Label htmlFor="course-status">Publication status</Label><select id="course-status" className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={status} onChange={(e) => setStatus(e.target.value as "draft" | "published")}><option value="draft">Save as draft</option><option value="published">Publish course</option></select></div>
             </div>
             <div className="space-y-2"><Label htmlFor="module-titles">Learning modules (one per line, use Title :: lesson content)</Label><Textarea id="module-titles" rows={5} value={modulesText} onChange={(e) => setModulesText(e.target.value)} /><p className="text-xs text-muted-foreground">Use “Title :: content” to add text content to each lesson.</p>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={includeQuiz} onChange={(e) => setIncludeQuiz(e.target.checked)} /> Include a final assessment (3 attempts)</label>
+            {includeQuiz && <div className="space-y-2"><Label htmlFor="quiz-questions">Assessment questions</Label><Textarea id="quiz-questions" rows={5} value={quizQuestionsText} onChange={(e) => setQuizQuestionsText(e.target.value)} /><p className="text-xs text-muted-foreground">One question per line: Question | Option A | Option B | Correct option. The correct option must exactly match one of the choices.</p></div>}
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={includeQuiz} onChange={(e) => setIncludeQuiz(e.target.checked)} /> Include a final assessment (3 attempts)</label>
             {includeQuiz && <div className="space-y-2"><Label htmlFor="quiz-questions">Assessment questions</Label><Textarea id="quiz-questions" rows={5} value={quizQuestionsText} onChange={(e) => setQuizQuestionsText(e.target.value)} /><p className="text-xs text-muted-foreground">One question per line: Question | Option A | Option B | Correct option. The correct option must exactly match one of the choices.</p></div>}</div>
             <div className="flex justify-end"><Button type="submit" disabled={saving || !title.trim()}>{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{saving ? "Saving…" : "Create course"}</Button></div>
