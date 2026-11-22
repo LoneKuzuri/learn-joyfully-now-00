@@ -61,7 +61,11 @@ create policy "learners read own module progress" on public.module_progress for 
 using (exists(select 1 from public.enrollments e where e.id=enrollment_id and (e.learner_id=auth.uid() or (e.organization_id=public.current_org() and public.can_manage_org()) or (public.current_role()='department_manager' and exists(select 1 from public.profiles p where p.id=e.learner_id and p.department_id=public.current_department())))));
 
 create policy "learners and managers read own quiz attempts" on public.quiz_attempts for select
-using (exists(select 1 from public.enrollments e where e.id=enrollment_id and (e.learner_id=auth.uid() or (e.organization_id=public.current_org() and public.can_manage_org()))));
+using (exists(select 1 from public.enrollments e where e.id=enrollment_id and (
+  e.learner_id=auth.uid()
+  or (e.organization_id=public.current_org() and public.can_manage_org())
+  or (public.current_role()='department_manager' and exists(select 1 from public.profiles p where p.id=e.learner_id and p.department_id=public.current_department()))
+)));
 
 create or replace view public.learner_quiz_questions as
 select q.id, q.quiz_id, q.prompt, q.kind, q.options, q.points, q.position
