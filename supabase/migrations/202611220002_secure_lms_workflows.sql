@@ -22,6 +22,9 @@ drop policy if exists "learners update own progress" on public.enrollments;
 drop policy if exists "module progress own or manager" on public.module_progress;
 drop policy if exists "learners manage own quiz attempts" on public.quiz_attempts;
 
+create policy "learners and managers read own quiz attempts" on public.quiz_attempts for select
+using (exists(select 1 from public.enrollments e where e.id=enrollment_id and (e.learner_id=auth.uid() or (e.organization_id=public.current_org() and public.can_manage_org()))));
+
 create or replace view public.learner_quiz_questions as
 select q.id, q.quiz_id, q.prompt, q.kind, q.options, q.points, q.position
 from public.quiz_questions q
@@ -228,7 +231,7 @@ begin
   select * into e from public.enrollments
   where id=p_enrollment_id and learner_id=auth.uid() and status <> 'cancelled';
   if e.id is null then raise exception 'Enrollment not found'; end if;
-  select z.*,m.id into q from public.quizzes z
+  select z.* into q from public.quizzes z
     join public.course_modules m on m.id=z.module_id
   where z.id=p_quiz_id and m.course_id=e.course_id;
   if q.id is null then raise exception 'Assessment not found in this course'; end if;
@@ -248,7 +251,7 @@ begin
 
   insert into public.quiz_attempts(enrollment_id,quiz_id,attempt_number,answers,score_percent,passed,submitted_at)
   values(e.id,p_quiz_id,attempt_no,coalesce(p_answers,'{}'::jsonb),score,did_pass,now());
-  select module_id into module_id from public.quizzes where id=p_quiz_id;
+  select z.module_id into module_id from public.quizzes z where z.id=p_quiz_id;
 
   if did_pass then
     insert into public.module_progress(enrollment_id,module_id,completed_at,updated_at)
