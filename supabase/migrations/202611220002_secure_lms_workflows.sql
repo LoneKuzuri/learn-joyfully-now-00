@@ -41,6 +41,14 @@ as 'select exists (
   where e.learner_id = p_profile_id and c.instructor_id = auth.uid()
 )';
 
+create or replace function public.can_manage_specific_course(p_course_id uuid)
+returns boolean language sql stable security definer set search_path = public
+as 'select exists (
+  select 1 from public.courses c
+  where c.id = p_course_id and c.organization_id = public.current_org()
+    and (public.can_manage_org() or (public.current_role() = ''trainer'' and c.instructor_id = auth.uid()))
+)';
+
 create policy "profiles visible by role scope" on public.profiles
 for select using (
   id = auth.uid()
@@ -101,16 +109,33 @@ with check (exists(
 drop policy if exists "course managers create" on public.courses;
 create policy "course managers create" on public.courses for insert
 with check (
-  organization_id=public.current_org() and public.can_manage_course() and created_by=auth.uid()
+  organization_id=public.current_org() and created_by=auth.uid()
+  and (public.can_manage_org() or (public.current_role()='trainer' and instructor_id=auth.uid()))
   and (instructor_id is null or exists(select 1 from public.profiles p where p.id=instructor_id and p.organization_id=public.current_org()))
 );
 drop policy if exists "course managers update" on public.courses;
 create policy "course managers update" on public.courses for update
-using (organization_id=public.current_org() and public.can_manage_course())
+using (organization_id=public.current_org() and (public.can_manage_org() or (public.current_role()='trainer' and instructor_id=auth.uid())))
 with check (
-  organization_id=public.current_org() and public.can_manage_course()
+  organization_id=public.current_org()
+  and (public.can_manage_org() or (public.current_role()='trainer' and instructor_id=auth.uid()))
   and (instructor_id is null or exists(select 1 from public.profiles p where p.id=instructor_id and p.organization_id=public.current_org()))
 );
+
+drop policy if exists "course managers manage modules" on public.course_modules;
+create policy "course managers manage modules" on public.course_modules for all
+using (public.can_manage_specific_course(course_id))
+with check (public.can_manage_specific_course(course_id));
+
+drop policy if exists "quiz managers manage" on public.quizzes;
+create policy "quiz managers manage" on public.quizzes for all
+using (exists(select 1 from public.course_modules m where m.id=module_id and public.can_manage_specific_course(m.course_id)))
+with check (exists(select 1 from public.course_modules m where m.id=module_id and public.can_manage_specific_course(m.course_id)));
+
+drop policy if exists "quiz managers manage questions" on public.quiz_questions;
+create policy "quiz managers manage questions" on public.quiz_questions for all
+using (exists(select 1 from public.quizzes z join public.course_modules m on m.id=z.module_id where z.id=quiz_id and public.can_manage_specific_course(m.course_id)))
+with check (exists(select 1 from public.quizzes z join public.course_modules m on m.id=z.module_id where z.id=quiz_id and public.can_manage_specific_course(m.course_id)));
 
 create policy "learners read own module progress" on public.module_progress for select
 using (exists(select 1 from public.enrollments e where e.id=enrollment_id and (e.learner_id=auth.uid() or (e.organization_id=public.current_org() and public.can_manage_org()) or (public.current_role()='department_manager' and exists(select 1 from public.profiles p where p.id=e.learner_id and p.department_id=public.current_department())))));
@@ -122,7 +147,7 @@ using (exists(
   join public.course_modules m on m.id=z.module_id
   join public.courses c on c.id=m.course_id
   where z.id=quiz_id and c.organization_id=public.current_org()
-    and (public.can_manage_course() or exists(
+    and (public.can_manage_org() or (public.current_role()='trainer' and c.instructor_id=auth.uid()) or exists(
       select 1 from public.enrollments e where e.course_id=c.id and e.learner_id=auth.uid()
     ))
 ));
