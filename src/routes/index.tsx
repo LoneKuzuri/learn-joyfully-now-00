@@ -20,7 +20,7 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Welcome — LearnHub" },
+      { title: "Welcome — Learning Hub Connect" },
       { name: "description", content: "Your personalized learning workspace." },
     ],
   }),
@@ -31,7 +31,7 @@ function LandingPage() {
   const { user, ready, allowed } = useAuthGuard();
   if (!ready || !allowed || !user) return <PageSkeleton />;
 
-  const isHR = isOrganizationAdmin(user.role) || user.role === "department_manager" || user.role === "trainer";
+  const isHR = isOrganizationAdmin(user.role) || user.role === "department_manager" || user.role === "trainer";\n  const primaryDestination = user.role === "platform_super_admin" ? "/platform/organizations" : user.role === "department_manager" ? "/hr/reports" : user.role === "trainer" ? "/hr/courses" : isHR ? "/hr/dashboard" : "/dashboard";\n  const secondaryDestination = user.role === "platform_super_admin" ? "/platform/organizations" : user.role === "trainer" ? "/hr/courses" : isHR ? "/hr/assign" : "/courses";
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
@@ -50,12 +50,12 @@ function LandingPage() {
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Button asChild variant="secondary" className="bg-white text-primary hover:bg-white/90">
-              <Link to={isHR ? (user.role === "department_manager" ? "/hr/reports" : user.role === "trainer" ? "/hr/courses" : "/hr/dashboard") : "/dashboard"}>
+              <Link to={primaryDestination}>
                 Go to my dashboard <ArrowRight className="h-4 w-4 ml-1" />
               </Link>
             </Button>
             <Button asChild variant="outline" className="bg-transparent border-white/30 text-primary-foreground hover:bg-white/10 hover:text-primary-foreground">
-              <Link to={isHR ? (user.role === "trainer" ? "/hr/courses" : "/hr/assign") : "/courses"}>
+              <Link to={secondaryDestination}>
                 {isHR ? "Assign first course" : "Browse catalog"}
               </Link>
             </Button>
