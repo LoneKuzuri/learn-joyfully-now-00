@@ -27,16 +27,21 @@ create or replace function public.current_department()
 returns uuid language sql stable security definer set search_path = public
 as 'select department_id from public.profiles where id = auth.uid() and is_active = true';
 
+create or replace function public.trainer_can_view_profile(p_profile_id uuid)
+returns boolean language sql stable security definer set search_path = public
+as 'select exists (
+  select 1 from public.enrollments e
+  join public.courses c on c.id = e.course_id
+  where e.learner_id = p_profile_id and c.instructor_id = auth.uid()
+)';
+
 create policy "profiles visible by role scope" on public.profiles
 for select using (
   id = auth.uid()
   or public.is_platform_admin()
   or (organization_id = public.current_org() and public.can_manage_org())
   or (organization_id = public.current_org() and public.current_role() = 'department_manager' and department_id = public.current_department())
-  or (organization_id = public.current_org() and public.current_role() = 'trainer' and exists (
-    select 1 from public.enrollments e join public.courses c on c.id=e.course_id
-    where e.learner_id=profiles.id and c.instructor_id=auth.uid()
-  ))
+  or (organization_id = public.current_org() and public.current_role() = 'trainer' and public.trainer_can_view_profile(profiles.id))
 );
 
 drop policy if exists "learners read own enrollments managers read org" on public.enrollments;
