@@ -16,7 +16,7 @@ const learner = [
   { title: "Certificates", url: "/certificates" as const, icon: Award },
   { title: "Notifications", url: "/notifications" as const, icon: Bell },
 ];
-const admin = [
+const platform = [\n  { title: "Organizations", url: "/platform/organizations" as const, icon: Building2 },\n];\nconst admin = [
   { title: "Workspace", url: "/hr" as const, icon: Home },
   { title: "Dashboard", url: "/hr/dashboard" as const, icon: BarChart3 },
   { title: "People & teams", url: "/hr/people" as const, icon: Users },
@@ -39,7 +39,7 @@ export function AppSidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const isActive = (p: string) => p === "/" ? pathname === "/" : pathname === p || pathname.startsWith(p + "/");
-  const items = !user ? learner : isOrganizationAdmin(user.role) ? admin : user.role === "department_manager" ? manager : user.role === "trainer" ? trainer : learner;
+  const items = !user ? learner : user.role === "platform_super_admin" ? platform : isOrganizationAdmin(user.role) ? admin : user.role === "department_manager" ? manager : user.role === "trainer" ? trainer : learner;
   const groupLabel = !user ? "Learning" : ({
     platform_super_admin: "Platform administration",
     organization_admin: "Organization administration",
