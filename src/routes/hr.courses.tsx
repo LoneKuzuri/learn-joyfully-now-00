@@ -70,13 +70,31 @@ function HRCoursesPage() {
         status,
       }).select("id").single();
       if (error) throw error;
-      const modules = moduleTitles.map((moduleTitle, index) => ({
-        course_id: course.id, title: moduleTitle, kind: "text" as const,
+      const modules = moduleItems.map((item, index) => ({
+        course_id: course.id, title: item.title, kind: "text" as const,
         position: index, estimated_minutes: 10, is_required: true,
-        body: "Learning content can be added to this module from the course editor.",
+        body: item.body || "Your instructor has not added lesson content yet.",
       }));
-      const { error: moduleError } = await supabase.from("course_modules").insert(modules);
+      if (includeQuiz) modules.push({
+        course_id: course.id, title: "Final Assessment", kind: "quiz" as const,
+        position: modules.length, estimated_minutes: 15, is_required: true,
+        body: "Complete the assessment to finish this course.",
+      });
+      const { data: createdModules, error: moduleError } = await supabase.from("course_modules").insert(modules).select("id,kind");
       if (moduleError) throw moduleError;
+      if (includeQuiz) {
+        const quizModule = createdModules?.find((module) => module.kind === "quiz");
+        if (!quizModule) throw new Error("Assessment module could not be created.");
+        const { data: quiz, error: quizError } = await supabase.from("quizzes").insert({ module_id: quizModule.id, max_attempts: 3 }).select("id").single();
+        if (quizError) throw quizError;
+        const questionRows = questions.map((parts, index) => ({
+          quiz_id: quiz.id, prompt: parts[0], kind: "single_choice" as const,
+          options: parts.slice(1, -1), correct_answers: [parts[parts.length - 1]],
+          points: 1, position: index,
+        }));
+        const { error: questionError } = await supabase.from("quiz_questions").insert(questionRows);
+        if (questionError) throw questionError;
+      }
       toast.success(status === "published" ? "Course created and published" : "Draft course created");
       setTitle(""); setDescription(""); setShowForm(false); await load();
     } catch (error) {
@@ -105,7 +123,9 @@ function HRCoursesPage() {
               <div className="space-y-2"><Label htmlFor="passing-score">Passing score (%)</Label><Input id="passing-score" type="number" min="0" max="100" value={passingScore} onChange={(e) => setPassingScore(e.target.value)} /></div>
               <div className="space-y-2"><Label htmlFor="course-status">Publication status</Label><select id="course-status" className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={status} onChange={(e) => setStatus(e.target.value as "draft" | "published")}><option value="draft">Save as draft</option><option value="published">Publish course</option></select></div>
             </div>
-            <div className="space-y-2"><Label htmlFor="module-titles">Learning modules (one title per line)</Label><Textarea id="module-titles" rows={5} value={modulesText} onChange={(e) => setModulesText(e.target.value)} /><p className="text-xs text-muted-foreground">This creates the course structure. Add lesson content and assessments in the next course-editor phase.</p></div>
+            <div className="space-y-2"><Label htmlFor="module-titles">Learning modules (one per line, use Title :: lesson content)</Label><Textarea id="module-titles" rows={5} value={modulesText} onChange={(e) => setModulesText(e.target.value)} /><p className="text-xs text-muted-foreground">Use “Title :: content” to add text content to each lesson.</p>
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={includeQuiz} onChange={(e) => setIncludeQuiz(e.target.checked)} /> Include a final assessment (3 attempts)</label>
+            {includeQuiz && <div className="space-y-2"><Label htmlFor="quiz-questions">Assessment questions</Label><Textarea id="quiz-questions" rows={5} value={quizQuestionsText} onChange={(e) => setQuizQuestionsText(e.target.value)} /><p className="text-xs text-muted-foreground">One question per line: Question | Option A | Option B | Correct option. The correct option must exactly match one of the choices.</p></div>}</div>
             <div className="flex justify-end"><Button type="submit" disabled={saving || !title.trim()}>{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{saving ? "Saving…" : "Create course"}</Button></div>
           </form>
         </CardContent></Card>
