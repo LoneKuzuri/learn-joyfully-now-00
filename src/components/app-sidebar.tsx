@@ -16,7 +16,10 @@ const learner = [
   { title: "Certificates", url: "/certificates" as const, icon: Award },
   { title: "Notifications", url: "/notifications" as const, icon: Bell },
 ];
-const platform = [\n  { title: "Organizations", url: "/platform/organizations" as const, icon: Building2 },\n];\nconst admin = [
+const platform = [
+  { title: "Organizations", url: "/platform/organizations" as const, icon: Building2 },
+];
+const admin = [
   { title: "Workspace", url: "/hr" as const, icon: Home },
   { title: "Dashboard", url: "/hr/dashboard" as const, icon: BarChart3 },
   { title: "People & teams", url: "/hr/people" as const, icon: Users },
