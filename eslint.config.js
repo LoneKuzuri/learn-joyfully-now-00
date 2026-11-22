@@ -37,4 +37,8 @@ export default tseslint.config(
     },
   },
   eslintPluginPrettier,
+  {
+    files: ["supabase/functions/**/*.ts"],
+    languageOptions: { globals: { Deno: "readonly" } },
+  },
 );
