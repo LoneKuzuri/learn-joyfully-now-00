@@ -1,12 +1,24 @@
 import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useAuth, type Role } from "@/lib/auth";
+import { useAuth, isOrganizationAdmin, type Role } from "@/lib/auth";
 
-/**
- * Guards a route by required role. Redirects to /signin if unauthenticated,
- * or to the user's own home if their role doesn't match.
- */
-export function useAuthGuard(requiredRole?: Role) {
+type RequiredRole = Role | "hr" | "learner";
+
+function isAllowed(role: Role, required?: RequiredRole) {
+  if (!required) return true;
+  if (required === "hr") return isOrganizationAdmin(role) || role === "department_manager" || role === "trainer";
+  if (required === "learner") return role === "learner" || role === "trainer";
+  return role === required;
+}
+
+export function homeForRole(role: Role) {
+  if (isOrganizationAdmin(role)) return "/hr/dashboard";
+  if (role === "department_manager") return "/hr/reports";
+  if (role === "trainer") return "/hr/courses";
+  return "/dashboard";
+}
+
+export function useAuthGuard(requiredRole?: RequiredRole) {
   const { user, ready } = useAuth();
   const navigate = useNavigate();
 
@@ -16,10 +28,10 @@ export function useAuthGuard(requiredRole?: Role) {
       navigate({ to: "/signin", replace: true });
       return;
     }
-    if (requiredRole && user.role !== requiredRole) {
-      navigate({ to: user.role === "hr" ? "/hr/dashboard" : "/dashboard", replace: true });
+    if (!isAllowed(user.role, requiredRole)) {
+      navigate({ to: homeForRole(user.role), replace: true });
     }
   }, [ready, user, requiredRole, navigate]);
 
-  return { user, ready, allowed: !!user && (!requiredRole || user.role === requiredRole) };
+  return { user, ready, allowed: !!user && isAllowed(user.role, requiredRole) };
 }
