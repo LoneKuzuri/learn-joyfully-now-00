@@ -2,11 +2,11 @@ import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useAuth, isOrganizationAdmin, type Role } from "@/lib/auth";
 
-type RequiredRole = Role | "hr" | "learner";
+type RequiredRole = Role | "hr" | "admin" | "learner";
 
 function isAllowed(role: Role, required?: RequiredRole) {
   if (!required) return true;
-  if (required === "hr") return isOrganizationAdmin(role) || role === "department_manager" || role === "trainer";
+  if (required === "admin") return isOrganizationAdmin(role);\n  if (required === "hr") return isOrganizationAdmin(role) || role === "department_manager" || role === "trainer";
   if (required === "learner") return role === "learner" || role === "trainer";
   return role === required;
 }
