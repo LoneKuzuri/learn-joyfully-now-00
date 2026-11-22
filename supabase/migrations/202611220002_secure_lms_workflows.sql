@@ -22,6 +22,9 @@ drop policy if exists "learners update own progress" on public.enrollments;
 drop policy if exists "module progress own or manager" on public.module_progress;
 drop policy if exists "learners manage own quiz attempts" on public.quiz_attempts;
 
+create policy "learners read own module progress" on public.module_progress for select
+using (exists(select 1 from public.enrollments e where e.id=enrollment_id and (e.learner_id=auth.uid() or (e.organization_id=public.current_org() and public.can_manage_org()) or (public.current_role()='department_manager' and exists(select 1 from public.profiles p where p.id=e.learner_id and p.department_id=public.current_department())))));
+
 create policy "learners and managers read own quiz attempts" on public.quiz_attempts for select
 using (exists(select 1 from public.enrollments e where e.id=enrollment_id and (e.learner_id=auth.uid() or (e.organization_id=public.current_org() and public.can_manage_org()))));
 
@@ -222,7 +225,7 @@ declare
   attempt_no integer;
   score numeric(5,2);
   did_pass boolean;
-  module_id uuid;
+  v_module_id uuid;
   required_count integer;
   completed_count integer;
   pct integer;
@@ -251,11 +254,11 @@ begin
 
   insert into public.quiz_attempts(enrollment_id,quiz_id,attempt_number,answers,score_percent,passed,submitted_at)
   values(e.id,p_quiz_id,attempt_no,coalesce(p_answers,'{}'::jsonb),score,did_pass,now());
-  select z.module_id into module_id from public.quizzes z where z.id=p_quiz_id;
+  select z.module_id into v_module_id from public.quizzes z where z.id=p_quiz_id;
 
   if did_pass then
     insert into public.module_progress(enrollment_id,module_id,completed_at,updated_at)
-    values(e.id,module_id,now(),now())
+    values(e.id,v_module_id,now(),now())
     on conflict(enrollment_id,module_id) do update
       set completed_at=coalesce(public.module_progress.completed_at,now()),updated_at=now();
   end if;
