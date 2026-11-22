@@ -25,7 +25,7 @@ const roleNames: Record<Role,string> = {
 };
 
 function PeoplePage() {
-  const { allowed } = useAuthGuard("hr");
+  const { allowed } = useAuthGuard("admin");
   const { user } = useAuth();
   const [people, setPeople] = useState<Person[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
