@@ -35,6 +35,9 @@ function PeoplePage() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<Role>("learner");
   const [departmentId, setDepartmentId] = useState("");
+  const [newDepartment, setNewDepartment] = useState("");
+  const [newTeam, setNewTeam] = useState("");
+  const [teamDepartmentId, setTeamDepartmentId] = useState("");
   const canInvite = !!user && isOrganizationAdmin(user.role);
   const roleOptions: Role[] = user?.role === "hr_coordinator"
     ? ["learner", "trainer", "department_manager"]
@@ -58,6 +61,24 @@ function PeoplePage() {
 
   useEffect(() => { if (allowed) void load(); }, [allowed]);
 
+  const createDepartment = async (event: FormEvent) => {
+    event.preventDefault();
+    try {
+      const { error } = await getSupabase().from("departments").insert({ name: newDepartment.trim(), organization_id: user?.organizationId });
+      if (error) throw error;
+      toast.success("Department created"); setNewDepartment(""); await load();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to create department"); }
+  };
+
+  const createTeam = async (event: FormEvent) => {
+    event.preventDefault();
+    try {
+      const { error } = await getSupabase().from("teams").insert({ name: newTeam.trim(), department_id: teamDepartmentId || null, organization_id: user?.organizationId });
+      if (error) throw error;
+      toast.success("Team created"); setNewTeam(""); await load();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to create team"); }
+  };
+
   const invite = async (event: FormEvent) => {
     event.preventDefault();
     setSaving(true);
@@ -77,6 +98,10 @@ function PeoplePage() {
   if (!allowed) return null;
   return <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
     <div><h1 className="text-2xl font-semibold tracking-tight">People & Teams</h1><p className="text-sm text-muted-foreground">Manage organization membership and role-based access.</p></div>
+    {canInvite && <div className="grid gap-4 md:grid-cols-2">
+      <Card><CardHeader><CardTitle className="text-base">Departments</CardTitle></CardHeader><CardContent><form onSubmit={createDepartment} className="flex gap-2"><Input required value={newDepartment} onChange={(e)=>setNewDepartment(e.target.value)} placeholder="Department name"/><Button type="submit">Add</Button></form><div className="mt-3 flex flex-wrap gap-2">{departments.map(d=><Badge key={d.id} variant="secondary">{d.name}</Badge>)}</div></CardContent></Card>
+      <Card><CardHeader><CardTitle className="text-base">Teams</CardTitle></CardHeader><CardContent><form onSubmit={createTeam} className="space-y-2"><Input required value={newTeam} onChange={(e)=>setNewTeam(e.target.value)} placeholder="Team name"/><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={teamDepartmentId} onChange={(e)=>setTeamDepartmentId(e.target.value)}><option value="">No department</option>{departments.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select><Button type="submit">Add team</Button></form></CardContent></Card>
+    </div>}
     {canInvite && <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><UserPlus className="h-4 w-4"/> Invite a team member</CardTitle></CardHeader><CardContent>
       <form onSubmit={invite} className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2"><Label htmlFor="invite-name">Full name</Label><Input id="invite-name" required value={name} onChange={(e)=>setName(e.target.value)} placeholder="Full name"/></div>
