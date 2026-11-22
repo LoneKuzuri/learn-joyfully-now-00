@@ -92,7 +92,7 @@ export function AppSidebar() {
             <div className="text-[11px] text-sidebar-foreground/60 truncate">{user?.department ?? ""}</div>
           </div>
         </div>
-        <SidebarMenu><SidebarMenuItem><SidebarMenuButton onClick={handleLogout} tooltip="Sign out"><LogOut /><span>Sign out</span></SidebarMenuButton></SidebarMenuItem></SidebarFooter>
+        <SidebarMenu><SidebarMenuItem><SidebarMenuButton onClick={handleLogout} tooltip="Sign out"><LogOut /><span>Sign out</span></SidebarMenuButton></SidebarMenuItem></SidebarMenu></SidebarFooter>
     </Sidebar>
   );
 }
