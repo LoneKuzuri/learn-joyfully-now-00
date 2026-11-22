@@ -6,12 +6,14 @@ type RequiredRole = Role | "hr" | "admin" | "learner";
 
 function isAllowed(role: Role, required?: RequiredRole) {
   if (!required) return true;
-  if (required === "admin") return isOrganizationAdmin(role);\n  if (required === "hr") return isOrganizationAdmin(role) || role === "department_manager" || role === "trainer";
+  if (required === "admin") return isOrganizationAdmin(role);
+  if (required === "hr") return isOrganizationAdmin(role) || role === "department_manager" || role === "trainer";
   if (required === "learner") return role === "learner" || role === "trainer";
   return role === required;
 }
 
 export function homeForRole(role: Role) {
+  if (role === "platform_super_admin") return "/platform/organizations";
   if (isOrganizationAdmin(role)) return "/hr/dashboard";
   if (role === "department_manager") return "/hr/reports";
   if (role === "trainer") return "/hr/courses";
