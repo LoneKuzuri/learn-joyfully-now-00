@@ -54,9 +54,12 @@ function CoursePlayerPage() {
       setCourse(courseRes.data as Course); setEnrollmentId(enrollmentRes.data.id);
       setModules((moduleRes.data??[]) as Module[]);
       setActiveId((moduleRes.data??[])[0]?.id??"");
+      const quizModuleIds = (moduleRes.data ?? []).filter((m) => m.kind === "quiz").map((m) => m.id);
       const [progressRes, quizRes] = await Promise.all([
         supabase.from("module_progress").select("module_id,completed_at").eq("enrollment_id",enrollmentRes.data.id),
-        supabase.from("quizzes").select("id,module_id,max_attempts").in("module_id",(moduleRes.data??[]).filter((m)=>m.kind==="quiz").map((m)=>m.id)),
+        quizModuleIds.length
+          ? supabase.from("quizzes").select("id,module_id,max_attempts").in("module_id",quizModuleIds)
+          : Promise.resolve({ data: [], error: null }),
       ]);
       if (progressRes.error) throw progressRes.error;
       if (quizRes.error) throw quizRes.error;
