@@ -24,7 +24,7 @@ type Target = { type: "department" | "team" | "individual"; id: string; label: s
 const steps = ["Select course", "Choose audience", "Set rules", "Review & publish"];
 
 function AssignPage() {
-  const { allowed } = useAuthGuard("hr");
+  const { allowed } = useAuthGuard("admin");
   const [step, setStep] = useState(0);
   const [courses, setCourses] = useState<Course[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
