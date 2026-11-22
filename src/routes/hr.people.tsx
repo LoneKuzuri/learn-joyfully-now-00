@@ -17,7 +17,8 @@ export const Route = createFileRoute("/hr/people")({
 });
 
 type Person = { id: string; full_name: string; email: string; role: Role; is_active: boolean; departments?: { name: string } | null };
-type Department = { id: string; name: string };\ntype Team = { id: string; name: string };
+type Department = { id: string; name: string };
+type Team = { id: string; name: string };
 const roleNames: Record<Role,string> = {
   platform_super_admin: "Platform Super Admin", organization_admin: "Organization Admin",
   hr_coordinator: "HR / Training Coordinator", department_manager: "Department Manager",
@@ -28,7 +29,10 @@ function PeoplePage() {
   const { allowed } = useAuthGuard("admin");
   const { user } = useAuth();
   const [people, setPeople] = useState<Person[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);\n  const [teams, setTeams] = useState<Team[]>([]);\n  const [selectedTeam, setSelectedTeam] = useState("");\n  const [selectedLearner, setSelectedLearner] = useState("");
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [selectedTeam, setSelectedTeam] = useState("");
+  const [selectedLearner, setSelectedLearner] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
