@@ -31,14 +31,16 @@ function LandingPage() {
   const { user, ready, allowed } = useAuthGuard();
   if (!ready || !allowed || !user) return <PageSkeleton />;
 
-  const isHR = isOrganizationAdmin(user.role) || user.role === "department_manager" || user.role === "trainer";\n  const primaryDestination = user.role === "platform_super_admin" ? "/platform/organizations" : user.role === "department_manager" ? "/hr/reports" : user.role === "trainer" ? "/hr/courses" : isHR ? "/hr/dashboard" : "/dashboard";\n  const secondaryDestination = user.role === "platform_super_admin" ? "/platform/organizations" : user.role === "trainer" ? "/hr/courses" : isHR ? "/hr/assign" : "/courses";
+  const isHR = isOrganizationAdmin(user.role) || user.role === "department_manager" || user.role === "trainer";
+  const primaryDestination = user.role === "platform_super_admin" ? "/platform/organizations" : user.role === "department_manager" ? "/hr/reports" : user.role === "trainer" ? "/hr/courses" : isHR ? "/hr/dashboard" : "/dashboard";
+  const secondaryDestination = user.role === "platform_super_admin" ? "/platform/organizations" : user.role === "trainer" ? "/hr/courses" : isHR ? "/hr/assign" : "/courses";
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       <section className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-sidebar via-primary to-info text-primary-foreground p-6 sm:p-10">
         <div className="relative z-10 max-w-2xl">
           <Badge className="bg-white/15 hover:bg-white/20 text-primary-foreground border-0 mb-3 gap-1">
-            <Sparkles className="h-3 w-3" /> Welcome to LearnHub
+            <Sparkles className="h-3 w-3" /> Welcome to Learning Hub Connect
           </Badge>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight">
             Hello {user.name.split(" ")[0]} 👋
