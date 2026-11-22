@@ -1,0 +1,95 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState, type FormEvent } from "react";
+import { useAuthGuard } from "@/hooks/use-auth-guard";
+import { useAuth, isOrganizationAdmin, type Role } from "@/lib/auth";
+import { getSupabase } from "@/lib/supabase";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { UserPlus, Users, Loader2 } from "lucide-react";
+
+export const Route = createFileRoute("/hr/people")({
+  head: () => ({ meta: [{ title: "People & Teams — Learning Hub Connect" }] }),
+  component: PeoplePage,
+});
+
+type Person = { id: string; full_name: string; email: string; role: Role; is_active: boolean; departments?: { name: string } | null };
+type Department = { id: string; name: string };
+const roleNames: Record<Role,string> = {
+  platform_super_admin: "Platform Super Admin", organization_admin: "Organization Admin",
+  hr_coordinator: "HR / Training Coordinator", department_manager: "Department Manager",
+  trainer: "Trainer / Instructor", learner: "Employee / Learner",
+};
+
+function PeoplePage() {
+  const { allowed } = useAuthGuard("hr");
+  const { user } = useAuth();
+  const [people, setPeople] = useState<Person[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<Role>("learner");
+  const [departmentId, setDepartmentId] = useState("");
+  const canInvite = !!user && isOrganizationAdmin(user.role);
+  const roleOptions: Role[] = user?.role === "hr_coordinator"
+    ? ["learner", "trainer", "department_manager"]
+    : ["hr_coordinator", "department_manager", "trainer", "learner"];
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const supabase = getSupabase();
+      const [peopleRes, deptRes] = await Promise.all([
+        supabase.from("profiles").select("id,full_name,email,role,is_active,departments(name)").order("full_name"),
+        supabase.from("departments").select("id,name").order("name"),
+      ]);
+      if (peopleRes.error) throw peopleRes.error;
+      if (deptRes.error) throw deptRes.error;
+      setPeople((peopleRes.data ?? []) as Person[]);
+      setDepartments(deptRes.data ?? []);
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to load organization members"); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { if (allowed) void load(); }, [allowed]);
+
+  const invite = async (event: FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const { data, error } = await getSupabase().functions.invoke("invite-user", {
+        body: { email: email.trim(), full_name: name.trim(), role, department_id: departmentId || null },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Invitation sent to " + email);
+      setName(""); setEmail(""); setDepartmentId(""); setRole("learner");
+      await load();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to invite user. Deploy the invite-user Edge Function first."); }
+    finally { setSaving(false); }
+  };
+
+  if (!allowed) return null;
+  return <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
+    <div><h1 className="text-2xl font-semibold tracking-tight">People & Teams</h1><p className="text-sm text-muted-foreground">Manage organization membership and role-based access.</p></div>
+    {canInvite && <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><UserPlus className="h-4 w-4"/> Invite a team member</CardTitle></CardHeader><CardContent>
+      <form onSubmit={invite} className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2"><Label htmlFor="invite-name">Full name</Label><Input id="invite-name" required value={name} onChange={(e)=>setName(e.target.value)} placeholder="Full name"/></div>
+        <div className="space-y-2"><Label htmlFor="invite-email">Work email</Label><Input id="invite-email" type="email" required value={email} onChange={(e)=>setEmail(e.target.value)} placeholder="name@company.com"/></div>
+        <div className="space-y-2"><Label htmlFor="invite-role">Role</Label><select id="invite-role" className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={role} onChange={(e)=>setRole(e.target.value as Role)}>{roleOptions.map((item)=><option key={item} value={item}>{roleNames[item]}</option>)}</select></div>
+        <div className="space-y-2"><Label htmlFor="invite-department">Department</Label><select id="invite-department" className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={departmentId} onChange={(e)=>setDepartmentId(e.target.value)}><option value="">No department</option>{departments.map((d)=><option key={d.id} value={d.id}>{d.name}</option>)}</select></div>
+        <div className="md:col-span-2 flex justify-end"><Button type="submit" disabled={saving}>{saving&&<Loader2 className="h-4 w-4 mr-2 animate-spin"/>}Send invitation</Button></div>
+      </form>
+      <p className="text-xs text-muted-foreground mt-3">Invitations are sent through Supabase Auth. Elevated platform administrator roles cannot be assigned from this screen.</p>
+    </CardContent></Card>}
+    <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Users className="h-4 w-4"/> Organization members <Badge variant="secondary">{people.length}</Badge></CardTitle></CardHeader><CardContent>
+      {loading ? <p className="py-8 text-center text-sm text-muted-foreground">Loading people…</p> : people.length===0 ? <p className="py-8 text-center text-sm text-muted-foreground">No members found.</p> :
+        <div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="border-b text-left text-muted-foreground"><th className="py-3 pr-4 font-medium">Member</th><th className="py-3 pr-4 font-medium">Department</th><th className="py-3 pr-4 font-medium">Role</th><th className="py-3 font-medium">Status</th></tr></thead><tbody>{people.map((person)=><tr key={person.id} className="border-b last:border-0"><td className="py-3 pr-4"><div className="font-medium">{person.full_name||"Unnamed user"}</div><div className="text-xs text-muted-foreground">{person.email}</div></td><td className="py-3 pr-4">{person.departments?.name||"—"}</td><td className="py-3 pr-4">{roleNames[person.role]}</td><td className="py-3"><Badge variant={person.is_active?"default":"outline"}>{person.is_active?"Active":"Inactive"}</Badge></td></tr>)}</tbody></table></div>}
+    </CardContent></Card>
+  </div>;
+}
