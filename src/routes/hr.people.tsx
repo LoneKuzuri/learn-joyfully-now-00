@@ -17,7 +17,7 @@ export const Route = createFileRoute("/hr/people")({
 });
 
 type Person = { id: string; full_name: string; email: string; role: Role; is_active: boolean; departments?: { name: string } | null };
-type Department = { id: string; name: string };
+type Department = { id: string; name: string };\ntype Team = { id: string; name: string };
 const roleNames: Record<Role,string> = {
   platform_super_admin: "Platform Super Admin", organization_admin: "Organization Admin",
   hr_coordinator: "HR / Training Coordinator", department_manager: "Department Manager",
@@ -28,7 +28,7 @@ function PeoplePage() {
   const { allowed } = useAuthGuard("admin");
   const { user } = useAuth();
   const [people, setPeople] = useState<Person[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);\n  const [teams, setTeams] = useState<Team[]>([]);\n  const [selectedTeam, setSelectedTeam] = useState("");\n  const [selectedLearner, setSelectedLearner] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
@@ -47,14 +47,19 @@ function PeoplePage() {
     setLoading(true);
     try {
       const supabase = getSupabase();
-      const [peopleRes, deptRes] = await Promise.all([
+      const [peopleRes, deptRes, teamRes] = await Promise.all([
         supabase.from("profiles").select("id,full_name,email,role,is_active,departments(name)").order("full_name"),
         supabase.from("departments").select("id,name").order("name"),
+        supabase.from("teams").select("id,name").order("name"),
       ]);
       if (peopleRes.error) throw peopleRes.error;
       if (deptRes.error) throw deptRes.error;
+      if (teamRes.error) throw teamRes.error;
       setPeople((peopleRes.data ?? []) as Person[]);
       setDepartments(deptRes.data ?? []);
+      setTeams(teamRes.data ?? []);
+      if (!selectedTeam && teamRes.data?.[0]) setSelectedTeam(teamRes.data[0].id);
+      if (!selectedLearner && peopleRes.data?.find((person) => person.role === "learner")) setSelectedLearner(peopleRes.data.find((person) => person.role === "learner")!.id);
     } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to load organization members"); }
     finally { setLoading(false); }
   };
@@ -77,6 +82,15 @@ function PeoplePage() {
       if (error) throw error;
       toast.success("Team created"); setNewTeam(""); await load();
     } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to create team"); }
+  };
+
+  const addTeamMember = async (event: FormEvent) => {
+    event.preventDefault();
+    try {
+      const { error } = await getSupabase().from("team_members").insert({ team_id: selectedTeam, profile_id: selectedLearner });
+      if (error) throw error;
+      toast.success("Learner added to team");
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to add team member"); }
   };
 
   const invite = async (event: FormEvent) => {
@@ -102,6 +116,7 @@ function PeoplePage() {
       <Card><CardHeader><CardTitle className="text-base">Departments</CardTitle></CardHeader><CardContent><form onSubmit={createDepartment} className="flex gap-2"><Input required value={newDepartment} onChange={(e)=>setNewDepartment(e.target.value)} placeholder="Department name"/><Button type="submit">Add</Button></form><div className="mt-3 flex flex-wrap gap-2">{departments.map(d=><Badge key={d.id} variant="secondary">{d.name}</Badge>)}</div></CardContent></Card>
       <Card><CardHeader><CardTitle className="text-base">Teams</CardTitle></CardHeader><CardContent><form onSubmit={createTeam} className="space-y-2"><Input required value={newTeam} onChange={(e)=>setNewTeam(e.target.value)} placeholder="Team name"/><select className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={teamDepartmentId} onChange={(e)=>setTeamDepartmentId(e.target.value)}><option value="">No department</option>{departments.map(d=><option key={d.id} value={d.id}>{d.name}</option>)}</select><Button type="submit">Add team</Button></form></CardContent></Card>
     </div>}
+    {canInvite && <Card><CardHeader><CardTitle className="text-base">Team membership</CardTitle></CardHeader><CardContent><form onSubmit={addTeamMember} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]"><div className="space-y-1"><Label htmlFor="member-team">Team</Label><select id="member-team" required className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={selectedTeam} onChange={(e)=>setSelectedTeam(e.target.value)}><option value="">Select team</option>{teams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></div><div className="space-y-1"><Label htmlFor="member-learner">Learner</Label><select id="member-learner" required className="h-10 w-full rounded-md border bg-background px-3 text-sm" value={selectedLearner} onChange={(e)=>setSelectedLearner(e.target.value)}><option value="">Select learner</option>{people.filter(p=>p.role==="learner").map(p=><option key={p.id} value={p.id}>{p.full_name||p.email}</option>)}</select></div><div className="flex items-end"><Button type="submit" disabled={!selectedTeam||!selectedLearner}>Add member</Button></div></form></CardContent></Card>}
     {canInvite && <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><UserPlus className="h-4 w-4"/> Invite a team member</CardTitle></CardHeader><CardContent>
       <form onSubmit={invite} className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2"><Label htmlFor="invite-name">Full name</Label><Input id="invite-name" required value={name} onChange={(e)=>setName(e.target.value)} placeholder="Full name"/></div>
