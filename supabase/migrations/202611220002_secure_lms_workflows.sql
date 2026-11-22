@@ -24,9 +24,9 @@ drop policy if exists "learners manage own quiz attempts" on public.quiz_attempt
 
 drop policy if exists "profiles visible within organization" on public.profiles;
 create or replace function public.current_department()
-returns uuid language sql stable security definer set search_path = public as $
-  select department_id from public.profiles where id = auth.uid() and is_active = true
-$;
+returns uuid language sql stable security definer set search_path = public
+as 'select department_id from public.profiles where id = auth.uid() and is_active = true';
+
 create policy "profiles visible by role scope" on public.profiles
 for select using (
   id = auth.uid()
