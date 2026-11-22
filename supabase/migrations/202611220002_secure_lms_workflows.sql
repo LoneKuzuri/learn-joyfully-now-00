@@ -6,6 +6,12 @@ revoke all on public.profiles from anon, authenticated;
 grant select on public.profiles to authenticated;
 grant update (full_name) on public.profiles to authenticated;
 
+-- Assignment creation is performed atomically by a trusted database function.
+revoke insert, update, delete on public.course_assignments from authenticated;
+grant select on public.course_assignments to authenticated;
+revoke insert, update, delete on public.assignment_targets from authenticated;
+grant select on public.assignment_targets to authenticated;
+
 -- Enrollment state, progress, answer keys and grading results are server-controlled.
 revoke insert, update, delete on public.enrollments from authenticated;
 grant select on public.enrollments to authenticated;
