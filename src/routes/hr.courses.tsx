@@ -55,6 +55,14 @@ function HRCoursesPage() {
 
   useEffect(() => { if (allowed) void load(); }, [allowed]);
 
+  const publishCourse = async (courseId: string) => {
+    try {
+      const { error } = await getSupabase().from("courses").update({ status: "published" }).eq("id", courseId);
+      if (error) throw error;
+      toast.success("Course published"); await load();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Unable to publish course"); }
+  };
+
   const createCourse = async (event: FormEvent) => {
     event.preventDefault();
     if (!user?.organizationId) { toast.error("Your account is not linked to an organization."); return; }
@@ -149,6 +157,7 @@ function HRCoursesPage() {
             <div className="flex items-center justify-between gap-2"><Badge variant="secondary">{course.category}</Badge><Badge variant={course.status === "published" ? "default" : "outline"}>{course.status}</Badge></div>
             <div className="font-semibold">{course.title}</div><p className="text-sm text-muted-foreground line-clamp-3">{course.description || "No description provided."}</p>
             <div className="text-xs text-muted-foreground">{course.estimated_minutes} min · Pass mark {course.passing_score}%</div>
+            {course.status === "draft" && canCreate && <Button size="sm" variant="outline" className="w-full" onClick={() => void publishCourse(course.id)}>Publish course</Button>}
           </CardContent></Card>)}
         </div>
       )}
