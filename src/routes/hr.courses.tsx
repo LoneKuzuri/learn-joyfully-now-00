@@ -71,7 +71,7 @@ function HRCoursesPage() {
       const supabase = getSupabase();
       const slug = title.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Date.now().toString(36);
       const { data: course, error } = await supabase.from("courses").insert({
-        organization_id: user.organizationId, created_by: user.id, title: title.trim(), slug,
+        organization_id: user.organizationId, created_by: user.id, instructor_id: user.role === "trainer" ? user.id : null, title: title.trim(), slug,
         category: category.trim() || "General", description: description.trim(),
         estimated_minutes: Math.max(0, Number(minutes) || 0),
         passing_score: Math.min(100, Math.max(0, Number(passingScore) || 70)),
