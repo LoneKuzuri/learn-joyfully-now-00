@@ -32,13 +32,19 @@ Deno.serve(async (req) => {
   const fullName = String(body.full_name ?? "").trim();
   const role = String(body.role ?? "learner");
   const departmentId = body.department_id ? String(body.department_id) : null;
-  const allowedRoles = caller.role === "hr_coordinator"
-    ? ["learner","trainer","department_manager"]
-    : ["hr_coordinator","department_manager","trainer","learner"];
+  const allowedRoles = caller.role === "platform_super_admin"
+    ? ["organization_admin","hr_coordinator","department_manager","trainer","learner"]
+    : caller.role === "hr_coordinator"
+      ? ["learner","trainer","department_manager"]
+      : ["hr_coordinator","department_manager","trainer","learner"];
   if (!email || !fullName || !email.includes("@")) return json({ error: "Enter a valid email and full name" }, 400);
   if (!allowedRoles.includes(role)) return json({ error: "You cannot assign that role" }, 403);
-  const organizationId = caller.organization_id;
-  if (!organizationId) return json({ error: "Your account is not attached to an organization" }, 400);
+  const organizationId = caller.role === "platform_super_admin"
+    ? String(body.organization_id ?? "")
+    : caller.organization_id;
+  if (!organizationId) return json({ error: "Select an organization for this invitation" }, 400);
+  const { data: organization } = await admin.from("organizations").select("id").eq("id", organizationId).maybeSingle();
+  if (!organization) return json({ error: "Organization not found" }, 404);
 
   if (departmentId) {
     const { data: department } = await admin.from("departments").select("id")
