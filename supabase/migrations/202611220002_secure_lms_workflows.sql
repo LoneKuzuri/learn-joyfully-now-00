@@ -22,6 +22,41 @@ drop policy if exists "learners update own progress" on public.enrollments;
 drop policy if exists "module progress own or manager" on public.module_progress;
 drop policy if exists "learners manage own quiz attempts" on public.quiz_attempts;
 
+drop policy if exists "profiles visible within organization" on public.profiles;
+create or replace function public.current_department()
+returns uuid language sql stable security definer set search_path = public as $
+  select department_id from public.profiles where id = auth.uid() and is_active = true
+$;
+create policy "profiles visible by role scope" on public.profiles
+for select using (
+  id = auth.uid()
+  or public.is_platform_admin()
+  or (organization_id = public.current_org() and public.can_manage_org())
+  or (organization_id = public.current_org() and public.current_role() = 'department_manager' and department_id = public.current_department())
+);
+
+drop policy if exists "learners read own enrollments managers read org" on public.enrollments;
+create policy "enrollments visible by role scope" on public.enrollments for select
+using (
+  learner_id = auth.uid()
+  or (organization_id = public.current_org() and public.can_manage_org())
+  or (public.current_role() = 'department_manager' and exists (
+    select 1 from public.profiles p where p.id = learner_id and p.department_id = public.current_department()
+  ))
+  or public.is_platform_admin()
+);
+
+drop policy if exists "certificates learner and org manager read" on public.certificates;
+create policy "certificates visible by role scope" on public.certificates for select
+using (
+  learner_id = auth.uid()
+  or (organization_id = public.current_org() and public.can_manage_org())
+  or (public.current_role() = 'department_manager' and exists (
+    select 1 from public.profiles p where p.id = learner_id and p.department_id = public.current_department()
+  ))
+  or public.is_platform_admin()
+);
+
 create policy "learners read own module progress" on public.module_progress for select
 using (exists(select 1 from public.enrollments e where e.id=enrollment_id and (e.learner_id=auth.uid() or (e.organization_id=public.current_org() and public.can_manage_org()) or (public.current_role()='department_manager' and exists(select 1 from public.profiles p where p.id=e.learner_id and p.department_id=public.current_department())))));
 
