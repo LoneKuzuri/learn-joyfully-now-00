@@ -24,3 +24,9 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+## Supabase backend setup
+
+Learning Hub Connect now supports a six-role, multi-tenant LMS workflow backed by Supabase. To configure the backend, follow the step-by-step guide in [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md).
+
+The setup guide covers project configuration, database migrations, platform administrator provisioning, Edge Function deployment, invitation email setup, and local development.
