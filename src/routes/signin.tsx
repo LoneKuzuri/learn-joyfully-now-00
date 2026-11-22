@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { homeForRole } from "@/hooks/use-auth-guard";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,9 +21,9 @@ function SignInPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  if (ready && user) {
-    void navigate({ to: homeForRole(user.role) as never, replace: true });
-  }
+  useEffect(() => {
+    if (ready && user) navigate({ to: homeForRole(user.role) as never, replace: true });
+  }, [ready, user, navigate]);
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -31,8 +31,6 @@ function SignInPage() {
     setLoading(true);
     try {
       await login(email.trim(), password);
-      const nextUser = await import("@/lib/auth");
-      void nextUser;
       navigate({ to: "/", replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to sign in. Please try again.");
