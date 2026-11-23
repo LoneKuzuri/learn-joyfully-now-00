@@ -1,0 +1,114 @@
+import { createFileRoute, useParams } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle2, ShieldAlert, Loader2 } from "lucide-react";
+import { getSupabase } from "@/lib/supabase";
+export const Route = createFileRoute("/verify/$verificationCode")({
+  head: () => ({ meta: [{ title: "Certificate Verification — Learning Hub Connect" }] }),
+  component: VerifyCertificatePage,
+});
+type Verification = {
+  valid: boolean;
+  status?: string;
+  message?: string;
+  learner?: string;
+  course?: string;
+  organization?: string;
+  issued_at?: string;
+  expires_at?: string | null;
+  verification_code?: string;
+};
+function VerifyCertificatePage() {
+  const { verificationCode } = useParams({ from: "/verify/$verificationCode" });
+  const [result, setResult] = useState<Verification | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    const verify = async () => {
+      const { data, error } = await getSupabase().functions.invoke("verify-certificate", {
+        body: { verification_code: verificationCode },
+      });
+      if (alive)
+        setResult(error ? { valid: false, message: error.message } : (data as Verification));
+      if (alive) setLoading(false);
+    };
+    void verify();
+    return () => {
+      alive = false;
+    };
+  }, [verificationCode]);
+  return (
+    <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
+      <Card className="w-full max-w-xl">
+        <CardHeader>
+          <CardTitle className="text-xl">Certificate verification</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Learning Hub Connect credential validation
+          </p>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="py-8 flex justify-center">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : !result?.valid ? (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+              <div className="flex items-center gap-2 font-semibold text-destructive">
+                <ShieldAlert className="h-5 w-5" />
+                Certificate not valid
+              </div>
+              <p className="text-sm mt-2">
+                {result?.message ?? "This certificate is expired or revoked."}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="rounded-lg border border-success/30 bg-success/5 p-4">
+                <div className="flex items-center gap-2 font-semibold text-success">
+                  <CheckCircle2 className="h-5 w-5" />
+                  Verified credential
+                </div>
+                <p className="text-sm mt-1">This certificate is valid and has not been revoked.</p>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Recipient</div>
+                <div className="font-medium">{result.learner}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Course</div>
+                <div className="font-medium">{result.course}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Issuing organization</div>
+                <div className="font-medium">{result.organization}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-xs text-muted-foreground">Issued</div>
+                  <div className="text-sm">
+                    {result.issued_at ? new Date(result.issued_at).toLocaleDateString() : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Expires</div>
+                  <div className="text-sm">
+                    {result.expires_at
+                      ? new Date(result.expires_at).toLocaleDateString()
+                      : "No expiry"}
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Verification code</div>
+                <Badge variant="secondary" className="font-mono mt-1">
+                  {result.verification_code}
+                </Badge>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

@@ -1,0 +1,206 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useState, type FormEvent } from "react";
+import { useAuthGuard } from "@/hooks/use-auth-guard";
+import { getSupabase } from "@/lib/supabase";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { Building2, Plus, UserPlus, Loader2 } from "lucide-react";
+export const Route = createFileRoute("/platform/organizations")({
+  head: () => ({ meta: [{ title: "Organizations — Learning Hub Connect" }] }),
+  component: OrganizationsPage,
+});
+type Organization = { id: string; name: string; slug: string; created_at: string };
+function OrganizationsPage() {
+  const { allowed } = useAuthGuard("platform_super_admin");
+  const [items, setItems] = useState<Organization[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [name, setName] = useState("");
+  const [adminName, setAdminName] = useState("");
+  const [adminEmail, setAdminEmail] = useState("");
+  const [selectedOrg, setSelectedOrg] = useState("");
+  const load = async () => {
+    const { data, error } = await getSupabase()
+      .from("organizations")
+      .select("id,name,slug,created_at")
+      .order("created_at", { ascending: false });
+    if (error) toast.error(error.message);
+    else {
+      setItems((data ?? []) as Organization[]);
+      if (!selectedOrg && data?.[0]) setSelectedOrg(data[0].id);
+    }
+    setLoading(false);
+  };
+  useEffect(() => {
+    if (allowed) void load();
+  }, [allowed]);
+  const createOrg = async (e: FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const slug = name
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+      const { data, error } = await getSupabase()
+        .from("organizations")
+        .insert({ name: name.trim(), slug: slug + "-" + Date.now().toString(36) })
+        .select("id")
+        .single();
+      if (error) throw error;
+      setSelectedOrg(data.id);
+      setName("");
+      toast.success("Organization created");
+      await load();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to create organization");
+    } finally {
+      setSaving(false);
+    }
+  };
+  const inviteAdmin = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!selectedOrg) return;
+    setSaving(true);
+    try {
+      const { data, error } = await getSupabase().functions.invoke("invite-user", {
+        body: {
+          email: adminEmail.trim(),
+          full_name: adminName.trim(),
+          role: "organization_admin",
+          organization_id: selectedOrg,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Organization administrator invited");
+      setAdminEmail("");
+      setAdminName("");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Unable to invite administrator");
+    } finally {
+      setSaving(false);
+    }
+  };
+  if (!allowed) return null;
+  return (
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Platform Organizations</h1>
+        <p className="text-sm text-muted-foreground">
+          Create tenant organizations and provision their first administrator.
+        </p>
+      </div>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Create organization
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={createOrg} className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="org-name">Organization name</Label>
+                <Input
+                  id="org-name"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Acme Corporation"
+                />
+              </div>
+              <Button disabled={saving || !name.trim()}>
+                <Plus className="h-4 w-4 mr-1" />
+                Create organization
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <UserPlus className="h-4 w-4" />
+              Invite organization administrator
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={inviteAdmin} className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="target-org">Organization</Label>
+                <select
+                  id="target-org"
+                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  value={selectedOrg}
+                  onChange={(e) => setSelectedOrg(e.target.value)}
+                >
+                  <option value="">Select organization</option>
+                  {items.map((o) => (
+                    <option key={o.id} value={o.id}>
+                      {o.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="admin-name">Administrator name</Label>
+                <Input
+                  id="admin-name"
+                  required
+                  value={adminName}
+                  onChange={(e) => setAdminName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="admin-email">Administrator email</Label>
+                <Input
+                  id="admin-email"
+                  type="email"
+                  required
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                />
+              </div>
+              <Button disabled={saving || !selectedOrg || !adminName.trim() || !adminEmail.trim()}>
+                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Send administrator
+                invite
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            Organizations <Badge variant="secondary">{items.length}</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Loading organizations…</p>
+          ) : items.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No organizations created yet.</p>
+          ) : (
+            <div className="divide-y">
+              {items.map((o) => (
+                <div key={o.id} className="py-3 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="font-medium">{o.name}</div>
+                    <div className="text-xs text-muted-foreground font-mono">{o.slug}</div>
+                  </div>
+                  <Badge variant="outline">Active tenant</Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

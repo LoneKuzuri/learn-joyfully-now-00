@@ -9,12 +9,18 @@ export type Course = {
   dueDate?: string;
   mandatory: boolean;
   thumbnail: string;
-  modules: { id: string; title: string; type: "video" | "scorm" | "pdf" | "quiz"; duration: string; completed: boolean }[];
+  modules: {
+    id: string;
+    title: string;
+    type: "video" | "scorm" | "pdf" | "quiz";
+    duration: string;
+    completed: boolean;
+  }[];
 };
 
 const cover = (hue: number) =>
   `data:image/svg+xml;utf8,${encodeURIComponent(
-    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 220'><defs><linearGradient id='g' x1='0' x2='1' y1='0' y2='1'><stop offset='0' stop-color='hsl(${hue},70%,55%)'/><stop offset='1' stop-color='hsl(${(hue + 40) % 360},70%,35%)'/></linearGradient></defs><rect width='400' height='220' fill='url(#g)'/><circle cx='320' cy='40' r='80' fill='white' opacity='0.08'/><circle cx='60' cy='200' r='60' fill='white' opacity='0.08'/></svg>`
+    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 220'><defs><linearGradient id='g' x1='0' x2='1' y1='0' y2='1'><stop offset='0' stop-color='hsl(${hue},70%,55%)'/><stop offset='1' stop-color='hsl(${(hue + 40) % 360},70%,35%)'/></linearGradient></defs><rect width='400' height='220' fill='url(#g)'/><circle cx='320' cy='40' r='80' fill='white' opacity='0.08'/><circle cx='60' cy='200' r='60' fill='white' opacity='0.08'/></svg>`,
   )}`;
 
 export const courses: Course[] = [
@@ -30,10 +36,28 @@ export const courses: Course[] = [
     mandatory: true,
     thumbnail: cover(220),
     modules: [
-      { id: "m1", title: "Introduction to Compliance", type: "video", duration: "12m", completed: true },
-      { id: "m2", title: "Anti-Harassment Policies", type: "video", duration: "24m", completed: true },
+      {
+        id: "m1",
+        title: "Introduction to Compliance",
+        type: "video",
+        duration: "12m",
+        completed: true,
+      },
+      {
+        id: "m2",
+        title: "Anti-Harassment Policies",
+        type: "video",
+        duration: "24m",
+        completed: true,
+      },
       { id: "m3", title: "Data Privacy & GDPR", type: "scorm", duration: "45m", completed: false },
-      { id: "m4", title: "Code of Conduct Handbook", type: "pdf", duration: "30m", completed: false },
+      {
+        id: "m4",
+        title: "Code of Conduct Handbook",
+        type: "pdf",
+        duration: "30m",
+        completed: false,
+      },
       { id: "m5", title: "Final Assessment", type: "quiz", duration: "20m", completed: false },
     ],
   },
@@ -50,7 +74,13 @@ export const courses: Course[] = [
     thumbnail: cover(190),
     modules: [
       { id: "m1", title: "What Great Leaders Do", type: "video", duration: "18m", completed: true },
-      { id: "m2", title: "Coaching Conversations", type: "video", duration: "32m", completed: false },
+      {
+        id: "m2",
+        title: "Coaching Conversations",
+        type: "video",
+        duration: "32m",
+        completed: false,
+      },
       { id: "m3", title: "Performance Feedback", type: "scorm", duration: "40m", completed: false },
     ],
   },
@@ -147,10 +177,30 @@ export const departments = [
 ];
 
 export const overdueLearners = [
-  { name: "Jordan Alvarez", department: "Sales", course: "Workplace Compliance Essentials", daysOverdue: 5 },
-  { name: "Mei Watanabe", department: "Operations", course: "Cybersecurity Awareness", daysOverdue: 3 },
-  { name: "Lucas Beck", department: "Engineering", course: "Product Onboarding 2026", daysOverdue: 7 },
-  { name: "Fatima Noor", department: "Sales", course: "Workplace Compliance Essentials", daysOverdue: 2 },
+  {
+    name: "Jordan Alvarez",
+    department: "Sales",
+    course: "Workplace Compliance Essentials",
+    daysOverdue: 5,
+  },
+  {
+    name: "Mei Watanabe",
+    department: "Operations",
+    course: "Cybersecurity Awareness",
+    daysOverdue: 3,
+  },
+  {
+    name: "Lucas Beck",
+    department: "Engineering",
+    course: "Product Onboarding 2026",
+    daysOverdue: 7,
+  },
+  {
+    name: "Fatima Noor",
+    department: "Sales",
+    course: "Workplace Compliance Essentials",
+    daysOverdue: 2,
+  },
 ];
 
 export const recentAssignments = [

@@ -1,0 +1,7 @@
+project_id = "learning-hub-connect"
+
+[functions.invite-user]
+verify_jwt = true
+
+[functions.verify-certificate]
+verify_jwt = false
